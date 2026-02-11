@@ -213,6 +213,7 @@ def main() -> int:
     # Include paths (same as your bat)
     inc_flags = [
         r"-ICore\Inc",
+        r"-ICore\app\Inc",  # NEW: your app headers
         r"-IDrivers\CMSIS\Include",
         r"-IDrivers\CMSIS\Device\ST\STM32F4xx\Include",
         r"-IDrivers\STM32F4xx_HAL_Driver\Inc",
@@ -274,6 +275,27 @@ def main() -> int:
         rc = run_cmd(log_path, cmd, env=env)
         if rc != 0:
             die(log_path, f"Compile failed: {src_path}")
+
+    # [2/8] Compile Core/app/Src
+    print("[2/8] Compiling Core/app/Src...")
+    write_log(log_path, "[2/8] Compiling Core/app/Src...")
+
+    app_sources = sorted(glob.glob(r"Core\app\Src\*.c"))
+    for src in app_sources:
+        src_path = Path(src)
+        obj = obj_path(out_dir, src_path)
+        if not args.rebuild and is_up_to_date(src_path, obj):
+            print(f"  [SKIP] {src_path}")
+            write_log(log_path, f"[SKIP] {src_path} -> {obj}")
+            continue
+
+        print(f"  Compiling {src_path}")
+        write_log(log_path, f"---- Compiling {src_path} ----")
+        cmd = [str(gcc_exe), *cflags, *inc_flags, "-c", str(src_path), "-o", str(obj)]
+        rc = run_cmd(log_path, cmd, env=env)
+        if rc != 0:
+            die(log_path, f"Compile failed: {src_path}")
+
 
     # [2/7] Compile HAL Drivers
     print("[2/7] Compiling HAL Drivers...")

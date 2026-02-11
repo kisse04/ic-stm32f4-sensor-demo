@@ -25,6 +25,9 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <stdint.h>
+
+#include "logger.h"
+#include "app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -95,25 +98,28 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  printf("Boot OK!\r\n");
+  //printf("Boot OK!\r\n");
+  Log_Init(&huart2);     // logger 綁定 UART2
+  App_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  int count = 0;
-
-  while (count < 10)
+  //int count = 0;
+  //while (count < 10)
+  while (1)
   {
-      HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-      HAL_Delay(500);
-      printf("LED toggle %d\r\n", count + 1);
-      count++;
+      //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+      //HAL_Delay(500);
+      //printf("LED toggle %d\r\n", count + 1);
+      //count++;
+      App_Run();
   }
 
   // 停到亮
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-  printf("Done. LED on.\r\n");
+  //HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+  //printf("Done. LED on.\r\n");
 
   while (1)
   {
