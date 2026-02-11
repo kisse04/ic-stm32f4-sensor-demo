@@ -1,0 +1,21 @@
+# === Build output ===
+Debug/
+out_gcc/
+test01-cppcheck-build-dir/
+
+# === Compiled files ===
+*.o
+*.d
+*.su
+*.cyclo
+*.elf
+*.map
+*.hex
+*.bin
+
+# === IDE auto-generated ===
+.settings/
+
+# === Logs ===
+*.log
+*.txt
