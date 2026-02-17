@@ -30,7 +30,7 @@ void App_Run(void)
     printf("LED toggle %d\r\n", s_count + 1);
     s_count++;
 
-    if (s_count >= 10)
+    if (s_count >= 20)
     {
       Led_On();
       printf("Done. LED on.\r\n");

@@ -1,6 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+#Ian 260217, guide
+'''
+0. prepare code, run CMD at project folder (ex. nucleo_f446_uart_test01)
+1. Clean build
+2. build using this script
+3. flash using ST tool
+
+build3.py --clean
+build3.py
+set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
+STM32_Programmer_CLI.exe -c port=SWD -w out_gcc\nucleo_f446_uart_test01.hex -v -rst
+
+
+'''
+
+#Putty connect
+
+'''
+Putty
+Serial line → COM3
+Speed	115200
+Data bits	8
+Stop bits	1
+Parity	None
+Flow control	None
+
+'''
+
+
 import argparse
 import glob
 import os
@@ -255,9 +284,9 @@ def main() -> int:
         "-Wl,--end-group",
     ]
 
-    # [1/7] Compile Core/Src
-    print("[1/7] Compiling Core/Src...")
-    write_log(log_path, "[1/7] Compiling Core/Src...")
+    # [1/10] Compile Core/Src
+    print("[1/10] Compiling Core/Src...")
+    write_log(log_path, "[1/10] Compiling Core/Src...")
 
     core_sources = sorted(glob.glob(r"Core\Src\*.c"))
     for src in core_sources:
@@ -276,9 +305,9 @@ def main() -> int:
         if rc != 0:
             die(log_path, f"Compile failed: {src_path}")
 
-    # [2/8] Compile Core/app/Src
-    print("[2/8] Compiling Core/app/Src...")
-    write_log(log_path, "[2/8] Compiling Core/app/Src...")
+    # [2/10] Compile Core/app/Src
+    print("[2/10] Compiling Core/app/Src...")
+    write_log(log_path, "[2/10] Compiling Core/app/Src...")
 
     app_sources = sorted(glob.glob(r"Core\app\Src\*.c"))
     for src in app_sources:
@@ -297,9 +326,9 @@ def main() -> int:
             die(log_path, f"Compile failed: {src_path}")
 
 
-    # [2/7] Compile HAL Drivers
-    print("[2/7] Compiling HAL Drivers...")
-    write_log(log_path, "[2/7] Compiling HAL Drivers...")
+    # [3/10] Compile HAL Drivers
+    print("[3/10] Compiling HAL Drivers...")
+    write_log(log_path, "[3/10] Compiling HAL Drivers...")
 
     hal_sources = sorted(glob.glob(r"Drivers\STM32F4xx_HAL_Driver\Src\*.c"))
     for src in hal_sources:
@@ -318,9 +347,9 @@ def main() -> int:
         if rc != 0:
             die(log_path, f"Compile failed: {src_path}")
 
-    # [3/7] Compile Startup
-    print("[3/7] Compiling Startup...")
-    write_log(log_path, "[3/7] Compiling Startup...")
+    # [4/10] Compile Startup
+    print("[4/10] Compiling Startup...")
+    write_log(log_path, "[4/10] Compiling Startup...")
 
     startup_s = Path(r"Core\Startup\startup_stm32f446retx.s")
     startup_o = obj_path(out_dir, startup_s)
@@ -347,9 +376,9 @@ def main() -> int:
         if rc != 0:
             die(log_path, "Startup compile failed")
 
-    # [4/7] Link (objects.list like ST)
-    print("[4/7] Linking...")
-    write_log(log_path, "[4/7] Linking...")
+    # [5/10] Link (objects.list like ST)
+    print("[5/10] Linking...")
+    write_log(log_path, "[5/10] Linking...")
 
     obj_list = out_dir / "objects.list"
     if obj_list.exists():
@@ -389,9 +418,9 @@ def main() -> int:
     print("[OK] Linking finished.")
     write_log(log_path, "[OK] Linking finished.")
 
-    # [5/7] Check ELF (summary only)
-    print("[5/7] Checking ELF...")
-    write_log(log_path, "[5/7] Checking ELF...")
+    # [6/10] Check ELF (summary only)
+    print("[6/10] Checking ELF...")
+    write_log(log_path, "[6/10] Checking ELF...")
 
     if not elf.exists():
         die(log_path, f"ELF missing: {elf}")
@@ -410,8 +439,8 @@ def main() -> int:
 
     # (Optional) Generate .list like ST: objdump -h -S elf > project.list
     if not args.no_objdump and objdump_exe.exists():
-        print("[5/7] ObjDump LIST...")
-        write_log(log_path, "[5/7] ObjDump LIST...")
+        print("[7/10] ObjDump LIST...")
+        write_log(log_path, "[7/10] ObjDump LIST...")
 
         list_file = out_dir / f"{project}.list"
         # We'll capture stdout into file directly (like ST makefile)
@@ -437,9 +466,9 @@ def main() -> int:
     else:
         list_file = None
 
-    # [6/7] Objcopy HEX
-    print("[6/7] Objcopy HEX...")
-    write_log(log_path, "[6/7] Objcopy HEX...")
+    # [8/10] Objcopy HEX
+    print("[8/10] Objcopy HEX...")
+    write_log(log_path, "[8/10] Objcopy HEX...")
 
     hex_file = out_dir / f"{project}.hex"
     cmd = [str(objcopy_exe), "-O", "ihex", str(elf), str(hex_file)]
@@ -450,9 +479,9 @@ def main() -> int:
     print("[OK] HEX created.")
     write_log(log_path, "[OK] HEX created.")
 
-    # [7/7] Objcopy BIN + Size
-    print("[7/7] Objcopy BIN...")
-    write_log(log_path, "[7/7] Objcopy BIN...")
+    # [9/10] Objcopy BIN + Size
+    print("[9/10] Objcopy BIN...")
+    write_log(log_path, "[9/10] Objcopy BIN...")
 
     bin_file = out_dir / f"{project}.bin"
     cmd = [str(objcopy_exe), "-O", "binary", str(elf), str(bin_file)]
@@ -463,8 +492,8 @@ def main() -> int:
     print("[OK] BIN created.")
     write_log(log_path, "[OK] BIN created.")
 
-    print("[7/7] Size...")
-    write_log(log_path, "[7/7] Size...")
+    print("[10/10] Size...")
+    write_log(log_path, "[10/10] Size...")
 
     cmd = [str(size_exe), str(elf)]
     rc = run_cmd(log_path, cmd, env=env)
