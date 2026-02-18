@@ -1,9 +1,11 @@
 #include <stdio.h>
-#include "stm32f4xx_hal.h"
 #include "app.h"
 #include "led.h"
 #include "logger.h"
 #include "bmp280.h"
+
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_i2c.h"
 
 extern I2C_HandleTypeDef hi2c1;
 
@@ -50,8 +52,9 @@ void App_Run(void)
   {
     Led_Toggle();
     
-    float temp = BMP280_ReadTemperature();
-    printf("Blink %d - Temp: %.2f C\r\n", s_count, temp);
+    int32_t temp = BMP280_ReadTemperature();
+    //printf("Blink %d - Temp: %.2f C\r\n", s_count, temp);
+    printf("Blink %d - Temp: %d C\r\n", s_count, temp);
     printf("LED toggle %d\r\n", s_count + 1);
 
     s_count++;
