@@ -53,8 +53,8 @@ void App_Run(void)
     Led_Toggle();
     
     int32_t temp = BMP280_ReadTemperature();
-    //printf("Blink %d - Temp: %.2f C\r\n", s_count, temp);
-    printf("Blink %d - Temp: %d C\r\n", s_count, temp);
+    printf("Blink %d - Temp: %ld.%02ld C\r\n", s_count, temp/100, temp%100);
+    //printf("Blink %d - Temp: %d C\r\n", s_count, temp);
     printf("LED toggle %d\r\n", s_count + 1);
 
     s_count++;
