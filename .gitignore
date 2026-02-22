@@ -2,6 +2,8 @@
 # STM32CubeIDE / STM32 Project
 # ===============================
 
+
+dir.txt
 # Build output
 out*/
 build*/
