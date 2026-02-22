@@ -99,8 +99,8 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  ic_Log_Init(&huart2);     // logger 綁定 UART2
-  ic_App_Init();
+  ic_log_init(&huart2);     // logger 綁定 UART2
+  ic_app_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,7 +108,7 @@ int main(void)
 
   while (1)
   {
-      ic_App_Run();
+      ic_app_run();
   }
 
   while (1)

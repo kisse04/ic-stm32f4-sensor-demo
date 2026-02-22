@@ -13,10 +13,10 @@ extern "C" {
  */
 typedef enum
 {
-    VL53L0X_OK = 0,
-    VL53L0X_ERROR = -1,
-    VL53L0X_TIMEOUT = -2,
-    VL53L0X_NOT_INITIALIZED = -3
+    IC_VL53L0X_OK = 0,
+    IC_VL53L0X_ERROR = -1,
+    IC_VL53L0X_TIMEOUT = -2,
+    IC_VL53L0X_NOT_INITIALIZED = -3
 } ic_vl53l0x_status_t;
 
 /**
@@ -30,13 +30,13 @@ typedef struct
 } ic_vl53l0x_handle_t;
 
 /* 預設 I2C address (HAL 需要左移一位) */
-#define ic_VL53L0X_I2C_ADDR_DEFAULT   (0x29U << 1)
+#define IC_VL53L0X_I2C_ADDR_DEFAULT   (0x29U << 1)
 
 /* 單次量測 timeout (ms) */
-#define ic_VL53L0X_RANGE_TIMEOUT_MS   (100U)
+#define IC_VL53L0X_RANGE_TIMEOUT_MS   (100U)
 
 /* 全域 handle：整個專案只用一顆的情況 */
-extern ic_vl53l0x_handle_t g_vl53l0x;
+extern ic_vl53l0x_handle_t g_ic_vl53l0x;
 
 /* 初始化（簡化版） */
 ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t     *dev,
@@ -47,7 +47,7 @@ ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t     *dev,
 ic_vl53l0x_status_t ic_vl53l0x_read_distance_mm(ic_vl53l0x_handle_t *dev,
                                           uint16_t         *distance_mm);
 
-/* 方便函式：用全域 g_vl53l0x 讀距離 */
+/* 方便函式：用全域 g_ic_vl53l0x 讀距離 */
 ic_vl53l0x_status_t ic_vl53l0x_get_distance_mm(uint16_t *distance_mm);
 
 #ifdef __cplusplus

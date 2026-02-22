@@ -4,12 +4,12 @@
 
 static UART_HandleTypeDef* s_log_uart = NULL;
 
-void ic_Log_Init(UART_HandleTypeDef* huart)
+void ic_log_init(UART_HandleTypeDef* huart)
 {
     s_log_uart = huart;
 }
 
-int ic_Log_Write(const uint8_t* data, uint16_t len)
+int ic_log_write(const uint8_t* data, uint16_t len)
 {
     if ((s_log_uart == NULL) || (data == NULL) || (len == 0U)) {
         return 0;
