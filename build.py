@@ -8,8 +8,8 @@
 2. build using this script
 3. flash using ST tool
 
-build3.py --clean
-build3.py
+build.py --clean
+build.py
 set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
 STM32_Programmer_CLI.exe -c port=SWD -w out_gcc\nucleo_f446_uart_test01.hex -v -rst
 
