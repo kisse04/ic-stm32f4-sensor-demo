@@ -43,6 +43,8 @@ not_using/
 .settings/
 *.launch
 *.mxproject
+.project
+.cproject
 
 # If you do NOT want to support opening with CubeIDE:
 #   Uncomment to ignore these:

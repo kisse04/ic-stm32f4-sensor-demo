@@ -3,6 +3,14 @@
 STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
 示範如何使用 I2C 讀取多顆感測器，並透過 UART 輸出 log。
 
+> **EN summary**  
+> This repository contains a bare-metal STM32F446RE (NUCLEO-F446RE) demo project integrating two I2C sensors (BMP280 for temperature and VL53L0X ToF distance).  
+> It showcases:
+> - Clean separation between App / Drivers / HAL (CubeMX generated)
+> - Handle-based sensor drivers with status enums
+> - A lightweight logging abstraction on top of UART (ic_logger)
+> - A custom GCC+Python build flow decoupled from STM32CubeIDE
+
 ---
 
 ## 1. 專案目標
