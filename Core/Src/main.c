@@ -27,8 +27,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "logger.h"
-#include "app.h"
+#include "ic_logger.h"
+#include "ic_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,8 +60,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int _write(int file, char *ptr, int len)
-
+int _write(int file, char *ptr, int len) //讓東西顯示在 com3可以從 putty看
 {
   HAL_UART_Transmit(&huart2, (uint8_t*)ptr, len, HAL_MAX_DELAY);
   return len;
@@ -100,28 +99,17 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  //printf("Boot OK!\r\n");
-  Log_Init(&huart2);     // logger 綁定 UART2
-  App_Init();
+  ic_Log_Init(&huart2);     // logger 綁定 UART2
+  ic_App_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  //int count = 0;
-  //while (count < 10)
   while (1)
   {
-      //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-      //HAL_Delay(500);
-      //printf("LED toggle %d\r\n", count + 1);
-      //count++;
-      App_Run();
+      ic_App_Run();
   }
-
-  // 停到亮
-  //HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-  //printf("Done. LED on.\r\n");
 
   while (1)
   {
