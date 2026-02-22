@@ -1,21 +1,62 @@
-# === Build output ===
-Debug/
-out_gcc/
-test01-cppcheck-build-dir/
+# ===============================
+# STM32CubeIDE / STM32 Project
+# ===============================
 
-# === Compiled files ===
+# Build output
+out*/
+build*/
+Debug/
+Release/
 *.o
-*.d
-*.su
-*.cyclo
 *.elf
-*.map
 *.hex
 *.bin
+*.map
+*.list
+*.lst
 
-# === IDE auto-generated ===
+# Python build artifacts
+__pycache__/
+*.pyc
+py.bin
+py_hdr.txt
+st.bin
+st_hdr.txt
+
+# User-created log files
+log.txt
+
+# Cppcheck temporary dirs
+test01-cppcheck-build-dir/
+test01.cppcheck
+
+# Not-used directory (your own `not_using/`)
+not_using/
+
+# ===============================
+# STM32CubeIDE Generated Files
+# ===============================
+
+# IDE metadata (safe to ignore)
 .settings/
+*.launch
+*.mxproject
 
-# === Logs ===
-*.log
-*.txt
+# If you do NOT want to support opening with CubeIDE:
+#   Uncomment to ignore these:
+# .project
+# .cproject
+
+# ===============================
+# Editor / OS / Misc
+# ===============================
+.vscode/
+*.swp
+*~
+*.tmp
+*.bak
+
+# ===============================
+# Git internal
+# ===============================
+!.gitignore
