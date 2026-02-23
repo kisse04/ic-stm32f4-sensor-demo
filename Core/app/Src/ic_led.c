@@ -1,19 +1,23 @@
+/**
+ * Board LED control helpers.
+ */
+
 #include "ic_led.h"
-#include "main.h"   // 這裡用到 LD2_GPIO_Port / LD2_Pin
+#include "main.h"
 
 void ic_led_init(void)
 {
-  // GPIO 已由 MX_GPIO_Init() 初始化；這裡先不做事也可以
+    /* GPIO initialization is performed by MX_GPIO_Init(). */
 }
 
 void ic_led_toggle(void)
 {
-  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 }
 
 void ic_led_on(void)
 {
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 }
 
 void ic_led_off(void)

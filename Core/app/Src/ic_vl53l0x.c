@@ -1,41 +1,36 @@
+/**
+ * VL53L0X time-of-flight sensor driver.
+ *
+ * This implementation provides a minimal single-shot ranging flow.
+ */
+
 #include "ic_vl53l0x.h"
-#include <string.h>
 
-/* -------------------------------------------------------------------------- */
-/*  Register addresses (subset, enough for simple single-shot ranging)        */
-/* -------------------------------------------------------------------------- */
+/** Register addresses required for simplified ranging flow. */
+#define IC_VL53L0X_REG_SYSRANGE_START                 0x00U
+#define IC_VL53L0X_REG_SYSTEM_INTERRUPT_CONFIG_GPIO   0x0AU
+#define IC_VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR         0x0BU
+#define IC_VL53L0X_REG_RESULT_INTERRUPT_STATUS        0x13U
+#define IC_VL53L0X_REG_RESULT_RANGE_STATUS            0x14U
+#define IC_VL53L0X_REG_IDENTIFICATION_MODEL_ID        0xC0U
 
-#define ic_VL53L0X_REG_SYSRANGE_START              0x00U
-#define ic_VL53L0X_REG_SYSTEM_INTERRUPT_CONFIG_GPIO 0x0AU
-#define ic_VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR      0x0BU
-#define ic_VL53L0X_REG_RESULT_INTERRUPT_STATUS     0x13U
-#define ic_VL53L0X_REG_RESULT_RANGE_STATUS         0x14U
-#define ic_VL53L0X_REG_IDENTIFICATION_MODEL_ID     0xC0U
+/** RESULT_RANGE_STATUS + 10 contains a 16-bit range result in millimeters. */
+#define IC_VL53L0X_REG_RESULT_DISTANCE_MILLI_HI       (IC_VL53L0X_REG_RESULT_RANGE_STATUS + 10U)
 
-/* RESULT_RANGE_STATUS + 10 會是 16-bit 距離值的位置 (mm) */
-#define ic_VL53L0X_REG_RESULT_DISTANCE_MILLI_HI    (ic_VL53L0X_REG_RESULT_RANGE_STATUS + 10U)
-
-/* -------------------------------------------------------------------------- */
-/*  Global handle                                                             */
-/* -------------------------------------------------------------------------- */
-
+/** Global VL53L0X handle for convenience APIs. */
 ic_vl53l0x_handle_t g_ic_vl53l0x = {
-    .hi2c           = NULL,
-    .i2c_addr       = IC_VL53L0X_I2C_ADDR_DEFAULT,
+    .hi2c = NULL,
+    .i2c_addr = IC_VL53L0X_I2C_ADDR_DEFAULT,
     .is_initialized = 0U
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Local helper functions                                                    */
-/* -------------------------------------------------------------------------- */
-
+/** Reads bytes from a VL53L0X register range. */
 static ic_vl53l0x_status_t prv_i2c_read_reg(ic_vl53l0x_handle_t *dev,
-                                         uint8_t           reg,
-                                         uint8_t          *p_data,
-                                         uint16_t          size)
+                                            uint8_t reg,
+                                            uint8_t *p_data,
+                                            uint16_t size)
 {
-    if ((dev == NULL) || (dev->hi2c == NULL))
-    {
+    if ((dev == NULL) || (dev->hi2c == NULL)) {
         return IC_VL53L0X_ERROR;
     }
 
@@ -45,21 +40,20 @@ static ic_vl53l0x_status_t prv_i2c_read_reg(ic_vl53l0x_handle_t *dev,
                          I2C_MEMADD_SIZE_8BIT,
                          p_data,
                          size,
-                         IC_VL53L0X_RANGE_TIMEOUT_MS) != HAL_OK)
-    {
+                         IC_VL53L0X_RANGE_TIMEOUT_MS) != HAL_OK) {
         return IC_VL53L0X_ERROR;
     }
 
     return IC_VL53L0X_OK;
 }
 
+/** Writes bytes into a VL53L0X register range. */
 static ic_vl53l0x_status_t prv_i2c_write_reg(ic_vl53l0x_handle_t *dev,
-                                          uint8_t           reg,
-                                          const uint8_t    *p_data,
-                                          uint16_t          size)
+                                             uint8_t reg,
+                                             const uint8_t *p_data,
+                                             uint16_t size)
 {
-    if ((dev == NULL) || (dev->hi2c == NULL))
-    {
+    if ((dev == NULL) || (dev->hi2c == NULL)) {
         return IC_VL53L0X_ERROR;
     }
 
@@ -69,59 +63,47 @@ static ic_vl53l0x_status_t prv_i2c_write_reg(ic_vl53l0x_handle_t *dev,
                           I2C_MEMADD_SIZE_8BIT,
                           (uint8_t *)p_data,
                           size,
-                          IC_VL53L0X_RANGE_TIMEOUT_MS) != HAL_OK)
-    {
+                          IC_VL53L0X_RANGE_TIMEOUT_MS) != HAL_OK) {
         return IC_VL53L0X_ERROR;
     }
 
     return IC_VL53L0X_OK;
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Public functions                                                          */
-/* -------------------------------------------------------------------------- */
-
-ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t  *dev,
-                              I2C_HandleTypeDef *hi2c,
-                              uint8_t            i2c_addr)
+ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t *dev,
+                                    I2C_HandleTypeDef *hi2c,
+                                    uint8_t i2c_addr)
 {
     uint8_t model_id = 0U;
-    uint8_t tmp      = 0U;
+    uint8_t tmp = 0U;
 
-    if ((dev == NULL) || (hi2c == NULL))
-    {
+    if ((dev == NULL) || (hi2c == NULL)) {
         return IC_VL53L0X_ERROR;
     }
 
-    dev->hi2c           = hi2c;
-    dev->i2c_addr       = i2c_addr;
+    dev->hi2c = hi2c;
+    dev->i2c_addr = i2c_addr;
     dev->is_initialized = 0U;
 
-    /* 1) 簡單讀 model ID，確認 I2C 有通 */
     if (prv_i2c_read_reg(dev,
-                         ic_VL53L0X_REG_IDENTIFICATION_MODEL_ID,
+                         IC_VL53L0X_REG_IDENTIFICATION_MODEL_ID,
                          &model_id,
-                         1U) != IC_VL53L0X_OK)
-    {
+                         1U) != IC_VL53L0X_OK) {
         return IC_VL53L0X_ERROR;
     }
 
-    /* 大部分模組這裡會回 0xEE，但有些 clone 可能不是，這邊只要能讀到就當 OK */
+    /* Model ID is read for bus/device validation in this simplified flow. */
     (void)model_id;
 
-    /* 2) 設定 GPIO interrupt 行為：新 sample ready 時觸發
-     *    這裡即使你不用實體 GPIO 也沒關係，方便我們用 STATUS 暫存器判斷。
-     */
-    tmp = 0x04U; /* "new sample ready" */
+    tmp = 0x04U;
     (void)prv_i2c_write_reg(dev,
-                            ic_VL53L0X_REG_SYSTEM_INTERRUPT_CONFIG_GPIO,
+                            IC_VL53L0X_REG_SYSTEM_INTERRUPT_CONFIG_GPIO,
                             &tmp,
                             1U);
 
-    /* 3) 清一次中斷旗標，保證狀態乾淨 */
     tmp = 0x01U;
     (void)prv_i2c_write_reg(dev,
-                            ic_VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR,
+                            IC_VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR,
                             &tmp,
                             1U);
 
@@ -130,72 +112,58 @@ ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t  *dev,
 }
 
 ic_vl53l0x_status_t ic_vl53l0x_read_distance_mm(ic_vl53l0x_handle_t *dev,
-                                          uint16_t         *distance_mm)
+                                                uint16_t *distance_mm)
 {
-    uint8_t  buf[2] = {0U};
-    uint8_t  status_reg;
-    uint8_t  cmd;
-    uint32_t start_tick;
+    uint8_t buf[2] = {0U};
+    uint8_t status_reg = 0U;
+    uint8_t cmd = 0U;
+    uint32_t start_tick = 0U;
 
-    if ((dev == NULL) || (distance_mm == NULL))
-    {
+    if ((dev == NULL) || (distance_mm == NULL)) {
         return IC_VL53L0X_ERROR;
     }
-
-    if (dev->is_initialized == 0U)
-    {
+    if (dev->is_initialized == 0U) {
         return IC_VL53L0X_NOT_INITIALIZED;
     }
 
-    /* 1) 啟動單次量測 (single shot): SYSRANGE_START = 0x01 */
     cmd = 0x01U;
     if (prv_i2c_write_reg(dev,
-                          ic_VL53L0X_REG_SYSRANGE_START,
+                          IC_VL53L0X_REG_SYSRANGE_START,
                           &cmd,
-                          1U) != IC_VL53L0X_OK)
-    {
+                          1U) != IC_VL53L0X_OK) {
         return IC_VL53L0X_ERROR;
     }
 
-    /* 2) 等待量測完成：poll RESULT_INTERRUPT_STATUS 直到低 3 bits 非 0 或 timeout */
     start_tick = HAL_GetTick();
-    do
-    {
+    do {
         if (prv_i2c_read_reg(dev,
-                             ic_VL53L0X_REG_RESULT_INTERRUPT_STATUS,
+                             IC_VL53L0X_REG_RESULT_INTERRUPT_STATUS,
                              &status_reg,
-                             1U) != IC_VL53L0X_OK)
-        {
+                             1U) != IC_VL53L0X_OK) {
             return IC_VL53L0X_ERROR;
         }
 
-        if ((status_reg & 0x07U) != 0U)
-        {
-            break; /* 有新數據 */
+        if ((status_reg & 0x07U) != 0U) {
+            break;
         }
     } while ((HAL_GetTick() - start_tick) < IC_VL53L0X_RANGE_TIMEOUT_MS);
 
-    if ((status_reg & 0x07U) == 0U)
-    {
-        /* timeout，沒有等到完成 */
+    if ((status_reg & 0x07U) == 0U) {
         return IC_VL53L0X_TIMEOUT;
     }
 
-    /* 3) 從 RESULT_RANGE_STATUS + 10 讀取 16-bit 距離 (mm) */
     if (prv_i2c_read_reg(dev,
-                         ic_VL53L0X_REG_RESULT_DISTANCE_MILLI_HI,
+                         IC_VL53L0X_REG_RESULT_DISTANCE_MILLI_HI,
                          buf,
-                         2U) != IC_VL53L0X_OK)
-    {
+                         2U) != IC_VL53L0X_OK) {
         return IC_VL53L0X_ERROR;
     }
 
-    *distance_mm = (uint16_t)(((uint16_t)buf[0] << 8) | (uint16_t)buf[1]);
+    *distance_mm = (uint16_t)((((uint16_t)buf[0]) << 8) | (uint16_t)buf[1]);
 
-    /* 4) 清中斷旗標，下一次量測前要先清掉 */
     cmd = 0x01U;
     (void)prv_i2c_write_reg(dev,
-                            ic_VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR,
+                            IC_VL53L0X_REG_SYSTEM_INTERRUPT_CLEAR,
                             &cmd,
                             1U);
 
