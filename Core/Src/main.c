@@ -101,8 +101,8 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  //ic_log_init(&huart2);     // logger 綁定 UART2, move to RTOS
-  //ic_app_init();            // move to RTOS
+  ic_log_init(&huart2);     // logger 綁定 UART2, move to RTOS, add it back
+  ic_app_init();            // move to RTOS, add it back
   /* USER CODE END 2 */
 
   /* Init scheduler */

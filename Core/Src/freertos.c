@@ -19,7 +19,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
-//#include "FreeRTOSConfig.h"
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
@@ -59,9 +58,17 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 512 * 4, //128*4 too small
   .priority = (osPriority_t) osPriorityNormal,
 };
-
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+
+/* IC: RTOS task define*/
+osThreadId_t ledTaskHandle;
+osThreadId_t tofTaskHandle;
+osThreadId_t tempTaskHandle;
+
+/* I2C mutex，用來保護 BMP280 / VL53L0X 的 I2C 存取 */
+osMutexId_t i2cMutexHandle;
+
 
 /* USER CODE END FunctionPrototypes */
 
@@ -101,6 +108,38 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  
+  /* IC: RTOS task define*/
+  // 1) 建 I2C mutex
+  const osMutexAttr_t i2cMutex_attributes = {
+    .name = "i2cMutex"
+  };
+  i2cMutexHandle = osMutexNew(&i2cMutex_attributes);
+
+  // 2) 建 LED task
+  const osThreadAttr_t ledTask_attributes = {
+    .name       = "ledTask",
+    .priority   = (osPriority_t)osPriorityLow,
+    .stack_size = 128 * 4
+  };
+  ledTaskHandle = osThreadNew(ic_app_led_task, NULL, &ledTask_attributes);
+
+  // 3) 建 TOF task
+  const osThreadAttr_t tofTask_attributes = {
+    .name       = "tofTask",
+    .priority   = (osPriority_t)osPriorityNormal,
+    .stack_size = 128 * 4
+  };
+  tofTaskHandle = osThreadNew(ic_app_tof_task, NULL, &tofTask_attributes);
+
+  // 4) 建 Temp task
+  const osThreadAttr_t tempTask_attributes = {
+    .name       = "tempTask",
+    .priority   = (osPriority_t)osPriorityBelowNormal,
+    .stack_size = 256 * 4
+  };
+  tempTaskHandle = osThreadNew(ic_app_temp_task, NULL, &tempTask_attributes);
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -119,14 +158,13 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  ic_log_init(&huart2);
-  ic_app_init();
+  //ic_log_init(&huart2);
+  //ic_app_init();
     
   /* Infinite loop */
   for(;;)
   {
-    ic_app_run();     // 每次呼叫做“一步”，可能什麼都不做就 return
-    osDelay(10);      // 10ms 或你想要的週期
+    osDelay(10);      
   }
   /* USER CODE END StartDefaultTask */
 }

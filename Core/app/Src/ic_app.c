@@ -16,6 +16,8 @@
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_i2c.h"
 
+extern osMutexId_t i2cMutexHandle;  // 在 freertos.c 建立
+
 extern I2C_HandleTypeDef hi2c1;
 
 static uint32_t s_led_count = 0;
@@ -77,65 +79,91 @@ ic_I2C_Scan (void)
     }
 }
 
-void
-ic_app_run (void)
+void ic_app_led_task(void *argument)
 {
-    if (s_done) {
-        return;
-    }
+    uint32_t led_count = 0;
 
-    const uint32_t now = HAL_GetTick ();
+    for (;;)
+    {
+        ic_led_toggle();
+        led_count++;
 
-    /* 1) LED toggle every 500 ms. */
-    if ((int32_t) (now - s_next_led_ms) >= 0) {
-        ic_led_toggle ();
-        s_led_count++;
+        printf("LED toggle %lu\r\n", (unsigned long)led_count);
 
-        printf ("LED toggle %lu\r\n", (unsigned long) s_led_count);
-
-        if (s_led_count >= 20) {
-            ic_led_on ();
-            printf ("Done. LED on.\r\n");
-            s_done = 1;
-            /* Do not return early so other sensors can finish this cycle. */
+        if (led_count >= 20) {
+            ic_led_on();
+            printf("Done. LED on.\r\n");
+            // 之後如果不想再動，可以暫停自己
+            osThreadExit();
         }
 
-        s_next_led_ms += 500U;
+        osDelay(500);    // 500 ms 週期
     }
+}
 
-    /* 2) TOF read every 250 ms. */
-    if ((int32_t) (now - s_next_tof_ms) >= 0) {
-        uint16_t tof_distance_mm = 0U;
-        ic_vl53l0x_status_t tof_st = ic_vl53l0x_get_distance_mm (&tof_distance_mm);
+void ic_app_tof_task(void *argument)
+{
+    uint32_t tof_count = 0;
 
-        if (tof_st == IC_VL53L0X_OK) {
-            s_tof_count++;
-            printf ("Tof detect %lu - distance: %u mm\r\n",
-                    (unsigned long) s_tof_count,
-                    (unsigned int) tof_distance_mm);
+    for (;;)
+    {
+        uint16_t distance_mm = 0;
+        ic_vl53l0x_status_t st;
+
+        // 共享 I2C，進出都要拿 mutex
+        osMutexAcquire(i2cMutexHandle, osWaitForever);
+        st = ic_vl53l0x_get_distance_mm(&distance_mm);
+        osMutexRelease(i2cMutexHandle);
+
+        if (st == IC_VL53L0X_OK) {
+            tof_count++;
+            printf("Tof detect %lu - distance: %u mm\r\n",
+                   (unsigned long)tof_count,
+                   (unsigned int)distance_mm);
+        } else {
+            printf("Tof read failed, status=%d\r\n", (int)st);
         }
-        else {
-            printf ("Tof read failed, status=%d\r\n", (int) tof_st);
+        
+        if (tof_count >= 40) {
+            printf("Done. tof stopped.\r\n");
+            // 之後如果不想再動，可以暫停自己
+            osThreadExit();
         }
 
-        s_next_tof_ms += 250U;
+        osDelay(250);  // 250 ms 週期
     }
+}
 
-    /* 3) Temperature read every 1000 ms. */
-    if ((int32_t) (now - s_next_temp_ms) >= 0) {
+void ic_app_temp_task(void *argument)
+{
+    uint32_t temp_count = 0;
+
+    for (;;)
+    {
         float temp_c = 0.0f;
-        ic_bmp280_status_t bmp_st = ic_bmp280_get_temperature (&temp_c);
+        ic_bmp280_status_t st;
 
-        if (bmp_st == IC_BMP280_OK) {
-            const int32_t temp_x100 = (int32_t) (temp_c * 100.0f);
-            printf ("Temp: %ld.%02ld C\r\n",
-                    temp_x100 / 100,
-                    temp_x100 % 100);
-        }
-        else {
-            printf ("BMP280 read failed, status=%d\r\n", (int) bmp_st);
+        osMutexAcquire(i2cMutexHandle, osWaitForever);
+        st = ic_bmp280_get_temperature(&temp_c);
+        osMutexRelease(i2cMutexHandle);
+
+        if (st == IC_BMP280_OK) {
+            int32_t temp_x100 = (int32_t)(temp_c * 100.0f);
+            printf("Temp: %ld.%02ld C\r\n",
+                   temp_x100 / 100,
+                   temp_x100 % 100);
+            temp_count++;
+        } else {
+            printf("BMP280 read failed, status=%d\r\n", (int)st);
         }
 
-        s_next_temp_ms += 1000U;
+        if (temp_count >= 10) {
+            printf("Done. temp stopped.\r\n");
+            // 之後如果不想再動，可以暫停自己
+            osThreadExit();
+        }
+
+
+        osDelay(1000);   // 1 s 週期
     }
 }
