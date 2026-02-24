@@ -43,17 +43,20 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
 
 ## 3. 軟體架構
 
-專案分為三層：
+專案分為四層：
 
 1. **App 層 (`ic_app`)**
    - `ic_app_init()`：初始化 logger、LED、感測器
-   - `ic_app_run()`：主迴圈，週期性讀取感測器並輸出 log
-2. **Driver / Middleware 層**
+   - `ic_app_run()`：由 RTOS task 或主迴圈週期性讀取感測器並輸出 log
+2. **RTOS 中間層（FreeRTOS/CMSIS-RTOS v2）**
+   - `Core/Src/freertos.c`：任務/排程初始化與 RTOS 啟動點
+   - `Middlewares/Third_Party/FreeRTOS`：FreeRTOS 核心與 CMSIS-RTOS v2 介面
+3. **Driver / Middleware 層**
    - `ic_bmp280`：BMP280 驅動
    - `ic_vl53l0x`：VL53L0X 驅動
    - `ic_led`：板上 LED 控制
    - `ic_logger`：log 介面（目前實作為 UART 輸出）
-3. **HAL / BSP 層（CubeMX 生成）**
+4. **HAL / BSP 層（CubeMX 生成）**
    - GPIO / I2C / USART 初始設定
    - clock / 中斷 / 系統啟動程式碼
 
@@ -83,6 +86,12 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
   +--------+
   | ic_led |
   +--------+ --> GPIO
+
+  +---------------------------+
+  |   FreeRTOS / CMSIS-RTOS   |
+  +---------------------------+
+         | (task schedule)
+         +--> ic_app_run()
 ```
 
 ---
@@ -101,6 +110,7 @@ Core/
 
   Src/
     main.c
+    freertos.c
     gpio.c
     i2c.c
     usart.c
@@ -124,6 +134,14 @@ Core/
       ic_led.c
       ic_logger_uart.c
       ic_vl53l0x.c
+
+Middlewares/
+  Third_Party/
+    FreeRTOS/
+      Source/
+        CMSIS_RTOS_V2/
+        include/
+        portable/
 ```
 
 ---

@@ -1,6 +1,15 @@
 Copyright (c) 2026. All rights reserved.
 
 ================================================================================
+RELEASE 2026-02-24
+- Refactor: added RTOS middle layer.
+
+- Updated RTOS integration and application flow:
+  - Core/Src/main.c
+  - Core/Src/freertos.c
+  - Core/app/Src/ic_app.c
+
+================================================================================
 RELEASE 2026-02-23
 - Updated source file documentation style and text formatting for:
   - Core/app/Src/ic_app.c
