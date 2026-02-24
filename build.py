@@ -246,6 +246,9 @@ def main() -> int:
         r"-IDrivers\CMSIS\Include",
         r"-IDrivers\CMSIS\Device\ST\STM32F4xx\Include",
         r"-IDrivers\STM32F4xx_HAL_Driver\Inc",
+        r"-IMiddlewares\Third_Party\FreeRTOS\Source\include", # NEW: RTOS headers
+        r"-IMiddlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2", # NEW: RTOS headers
+        r"-IMiddlewares\Third_Party\FreeRTOS\Source\portable\GCC\ARM_CM4F" # NEW: RTOS headers
     ]
 
     # CFLAGS: align with ST's hard-float ABI (and keep your debug settings)
@@ -326,12 +329,51 @@ def main() -> int:
             die(log_path, f"Compile failed: {src_path}")
 
 
-    # [3/10] Compile HAL Drivers
-    print("[3/10] Compiling HAL Drivers...")
-    write_log(log_path, "[3/10] Compiling HAL Drivers...")
+    # [3/10] Compile HAL Drivers + FreeRTOS
+    print("[3/10] Compiling HAL Drivers + FreeRTOS...")
+    write_log(log_path, "[3/10] Compiling HAL Drivers + FreeRTOS...")
 
+    # HAL drivers
     hal_sources = sorted(glob.glob(r"Drivers\STM32F4xx_HAL_Driver\Src\*.c"))
     for src in hal_sources:
+        src_path = Path(src)
+        obj = obj_path(out_dir, src_path)
+
+        if not args.rebuild and is_up_to_date(src_path, obj):
+            print(f"  [SKIP] {src_path}")
+            write_log(log_path, f"[SKIP] {src_path} -> {obj}")
+            continue
+
+        print(f"  Compiling {src_path}")
+        write_log(log_path, f"---- Compiling {src_path} ----")
+        cmd = [str(gcc_exe), *cflags, *inc_flags, "-c", str(src_path), "-o", str(obj)]
+        rc = run_cmd(log_path, cmd, env=env)
+        if rc != 0:
+            die(log_path, f"Compile failed: {src_path}")
+
+    # FreeRTOS kernel + CMSIS-RTOS2 wrapper + port + heap_4
+    print("  [RTOS] Compiling FreeRTOS sources...")
+    write_log(log_path, "  [RTOS] Compiling FreeRTOS sources...")
+
+    freertos_sources = []
+    # 核心 kernel 檔案
+    freertos_sources += sorted(glob.glob(
+        r"Middlewares\Third_Party\FreeRTOS\Source\*.c"
+    ))
+    # CMSIS-RTOS v2 封裝
+    freertos_sources += sorted(glob.glob(
+        r"Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\*.c"
+    ))
+    # Cortex-M4F GCC port
+    freertos_sources += sorted(glob.glob(
+        r"Middlewares\Third_Party\FreeRTOS\Source\portable\GCC\ARM_CM4F\*.c"
+    ))
+    # 記憶體管理：CubeMX 預設是 heap_4.c
+    freertos_sources.append(
+        r"Middlewares\Third_Party\FreeRTOS\Source\portable\MemMang\heap_4.c"
+    )
+
+    for src in freertos_sources:
         src_path = Path(src)
         obj = obj_path(out_dir, src_path)
 

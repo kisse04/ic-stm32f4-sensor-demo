@@ -275,24 +275,85 @@ Found device at 0x76
 [BMP280] T1=27316 T2=26382 T3=-1000
 [BMP280] init OK
 VL53L0X init OK
-[BMP280] temp raw: 80 27 00
-Blink 0 - Temp: 27.54 C
-Tof detect 1 - distance: 20 mm
+Tof detect 1 - distance: 207 mm
 LED toggle 1
-[BMP280] temp raw: 80 24 00
-Blink 1 - Temp: 27.53 C
-Tof detect 2 - distance: 20 mm
+Tof detect 2 - distance: 210 mm
+Tof detect 3 - distance: 207 mm
 LED toggle 2
-[BMP280] temp raw: 80 1F 00
-Blink 2 - Temp: 27.50 C
-Tof detect 3 - distance: 20 mm
+Tof detect 4 - distance: 207 mm
+[BMP280] temp raw: 81 99 00
+Temp: 29.39 C
+Tof detect 5 - distance: 204 mm
 LED toggle 3
-[BMP280] temp raw: 80 14 00
-Blink 3 - Temp: 27.45 C
-Tof detect 4 - distance: 155 mm
+Tof detect 6 - distance: 207 mm
+Tof detect 7 - distance: 209 mm
 LED toggle 4
-[BMP280] temp raw: 80 16 00
-Blink 4 - Temp: 27.46 C
-Tof detect 5 - distance: 146 mm
+Tof detect 8 - distance: 208 mm
+[BMP280] temp raw: 81 99 00
+Temp: 29.39 C
+Tof detect 9 - distance: 208 mm
 LED toggle 5
+Tof detect 10 - distance: 210 mm
+Tof detect 11 - distance: 208 mm
+LED toggle 6
+Tof detect 12 - distance: 209 mm
+[BMP280] temp raw: 81 99 00
+Temp: 29.39 C
+Tof detect 13 - distance: 210 mm
+LED toggle 7
+Tof detect 14 - distance: 208 mm
+Tof detect 15 - distance: 206 mm
+LED toggle 8
+Tof detect 16 - distance: 208 mm
+[BMP280] temp raw: 81 97 00
+Temp: 29.38 C
+Tof detect 17 - distance: 207 mm
+LED toggle 9
+Tof detect 18 - distance: 209 mm
+Tof detect 19 - distance: 206 mm
+LED toggle 10
+Tof detect 20 - distance: 206 mm
+[BMP280] temp raw: 81 99 00
+Temp: 29.39 C
+Tof detect 21 - distance: 209 mm
+LED toggle 11
+Tof detect 22 - distance: 208 mm
+Tof detect 23 - distance: 207 mm
+LED toggle 12
+Tof detect 24 - distance: 206 mm
+[BMP280] temp raw: 81 99 00
+Temp: 29.39 C
+Tof detect 25 - distance: 207 mm
+LED toggle 13
+Tof detect 26 - distance: 207 mm
+Tof detect 27 - distance: 206 mm
+LED toggle 14
+Tof detect 28 - distance: 208 mm
+[BMP280] temp raw: 81 9B 00
+Temp: 29.40 C
+Tof detect 29 - distance: 208 mm
+LED toggle 15
+Tof detect 30 - distance: 209 mm
+Tof detect 31 - distance: 207 mm
+LED toggle 16
+Tof detect 32 - distance: 207 mm
+[BMP280] temp raw: 81 9B 00
+Temp: 29.40 C
+Tof detect 33 - distance: 209 mm
+LED toggle 17
+Tof detect 34 - distance: 209 mm
+Tof detect 35 - distance: 208 mm
+LED toggle 18
+Tof detect 36 - distance: 210 mm
+[BMP280] temp raw: 81 99 00
+Temp: 29.39 C
+Tof detect 37 - distance: 209 mm
+LED toggle 19
+Tof detect 38 - distance: 208 mm
+Tof detect 39 - distance: 206 mm
+LED toggle 20
+Done. LED on.
+Tof detect 40 - distance: 208 mm
+[BMP280] temp raw: 81 9A 00
+Temp: 29.40 C
 ```
