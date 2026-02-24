@@ -9,6 +9,9 @@ RELEASE 2026-02-24
   - Core/Src/freertos.c
   - Core/app/Src/ic_app.c
 
+- Documented RTOS task model (LED/TOF/Temp), I2C mutex usage, and task intervals:
+  - readme.md
+
 ================================================================================
 RELEASE 2026-02-23
 - Updated source file documentation style and text formatting for:

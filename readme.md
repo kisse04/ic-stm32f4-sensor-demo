@@ -1,4 +1,6 @@
 ﻿# ic-stm32f4-sensor-demo
+更新日期：2026-02-24
+
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
 示範如何使用 I2C 讀取多顆感測器，並透過 UART 輸出 log。
@@ -46,8 +48,10 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
 專案分為四層：
 
 1. **App 層 (`ic_app`)**
-   - `ic_app_init()`：初始化 logger、LED、感測器
-   - `ic_app_run()`：由 RTOS task 或主迴圈週期性讀取感測器並輸出 log
+   - `ic_app_init()`：初始化 LED、感測器與 I2C 掃描
+   - `ic_app_led_task()`：500ms 週期切換 LED（20 次後結束）
+   - `ic_app_tof_task()`：250ms 週期讀 VL53L0X（40 次後結束）
+   - `ic_app_temp_task()`：1000ms 週期讀 BMP280 溫度（10 次後結束）
 2. **RTOS 中間層（FreeRTOS/CMSIS-RTOS v2）**
    - `Core/Src/freertos.c`：任務/排程初始化與 RTOS 啟動點
    - `Middlewares/Third_Party/FreeRTOS`：FreeRTOS 核心與 CMSIS-RTOS v2 介面
@@ -66,7 +70,7 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
           +----------------------+
           |      ic_app          |
           |  - ic_app_init()     |
-          |  - ic_app_run()      |
+          |  - ic_app_*_task()   |
           +----------+-----------+
                      |
         +------------+-------------+
@@ -91,7 +95,7 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
   |   FreeRTOS / CMSIS-RTOS   |
   +---------------------------+
          | (task schedule)
-         +--> ic_app_run()
+         +--> ic_app_*_task()
 ```
 
 ---
@@ -152,19 +156,23 @@ Middlewares/
 
 ```c
 void ic_app_init(void);
-void ic_app_run(void);
+void ic_app_led_task(void *argument);
+void ic_app_tof_task(void *argument);
+void ic_app_temp_task(void *argument);
 ```
 
 - `ic_app_init()`
-  - 呼叫 `ic_log_init()` 綁定 UART
   - 初始化 LED
+  - 執行 I2C 掃描
   - 初始化 BMP280 / VL53L0X
-- `ic_app_run()`
-  - 迴圈中：
-    - 讀取溫度 (`ic_bmp280`)
-    - 讀取距離 (`ic_vl53l0x`)
-    - 使用 `IC_LOGI()` 輸出資料
-    - 切換 LED 狀態
+- `ic_app_led_task()`
+  - 500ms 週期切換 LED
+- `ic_app_tof_task()`
+  - 250ms 週期讀取 VL53L0X 距離
+  - I2C 存取前後使用 mutex
+- `ic_app_temp_task()`
+  - 1000ms 週期讀取 BMP280 溫度
+  - I2C 存取前後使用 mutex
 
 ### 5.2 ic_bmp280
 
@@ -293,85 +301,87 @@ Found device at 0x76
 [BMP280] T1=27316 T2=26382 T3=-1000
 [BMP280] init OK
 VL53L0X init OK
-Tof detect 1 - distance: 207 mm
+Tof detect 1 - distance: 135 mm
+[BMP280] temp raw: 81 B8 00
+Temp: 29.55 C
 LED toggle 1
-Tof detect 2 - distance: 210 mm
-Tof detect 3 - distance: 207 mm
+Tof detect 2 - distance: 138 mm
 LED toggle 2
-Tof detect 4 - distance: 207 mm
-[BMP280] temp raw: 81 99 00
-Temp: 29.39 C
-Tof detect 5 - distance: 204 mm
+Tof detect 3 - distance: 139 mm
+Tof detect 4 - distance: 139 mm
+[BMP280] temp raw: 81 B7 00
+Temp: 29.54 C
 LED toggle 3
-Tof detect 6 - distance: 207 mm
-Tof detect 7 - distance: 209 mm
+Tof detect 5 - distance: 136 mm
+Tof detect 6 - distance: 135 mm
 LED toggle 4
-Tof detect 8 - distance: 208 mm
-[BMP280] temp raw: 81 99 00
-Temp: 29.39 C
-Tof detect 9 - distance: 208 mm
+Tof detect 7 - distance: 137 mm
+[BMP280] temp raw: 81 B9 00
+Temp: 29.55 C
 LED toggle 5
-Tof detect 10 - distance: 210 mm
-Tof detect 11 - distance: 208 mm
+Tof detect 8 - distance: 136 mm
+Tof detect 9 - distance: 137 mm
 LED toggle 6
-Tof detect 12 - distance: 209 mm
-[BMP280] temp raw: 81 99 00
-Temp: 29.39 C
-Tof detect 13 - distance: 210 mm
+Tof detect 10 - distance: 135 mm
+Tof detect 11 - distance: 136 mm
+[BMP280] temp raw: 81 BA 00
+Temp: 29.56 C
 LED toggle 7
-Tof detect 14 - distance: 208 mm
-Tof detect 15 - distance: 206 mm
+Tof detect 12 - distance: 137 mm
 LED toggle 8
-Tof detect 16 - distance: 208 mm
-[BMP280] temp raw: 81 97 00
-Temp: 29.38 C
-Tof detect 17 - distance: 207 mm
+Tof detect 13 - distance: 136 mm
+Tof detect 14 - distance: 136 mm
+[BMP280] temp raw: 81 B9 00
+Temp: 29.55 C
 LED toggle 9
-Tof detect 18 - distance: 209 mm
-Tof detect 19 - distance: 206 mm
+Tof detect 15 - distance: 138 mm
+Tof detect 16 - distance: 137 mm
 LED toggle 10
-Tof detect 20 - distance: 206 mm
-[BMP280] temp raw: 81 99 00
-Temp: 29.39 C
-Tof detect 21 - distance: 209 mm
+Tof detect 17 - distance: 138 mm
+[BMP280] temp raw: 81 B9 00
+Temp: 29.55 C
 LED toggle 11
-Tof detect 22 - distance: 208 mm
-Tof detect 23 - distance: 207 mm
+Tof detect 18 - distance: 137 mm
+Tof detect 19 - distance: 135 mm
 LED toggle 12
-Tof detect 24 - distance: 206 mm
-[BMP280] temp raw: 81 99 00
-Temp: 29.39 C
-Tof detect 25 - distance: 207 mm
+Tof detect 20 - distance: 138 mm
+Tof detect 21 - distance: 137 mm
+[BMP280] temp raw: 81 B9 00
+Temp: 29.55 C
 LED toggle 13
-Tof detect 26 - distance: 207 mm
-Tof detect 27 - distance: 206 mm
+Tof detect 22 - distance: 136 mm
 LED toggle 14
-Tof detect 28 - distance: 208 mm
-[BMP280] temp raw: 81 9B 00
-Temp: 29.40 C
-Tof detect 29 - distance: 208 mm
+Tof detect 23 - distance: 136 mm
+Tof detect 24 - distance: 135 mm
+[BMP280] temp raw: 81 B8 00
+Temp: 29.55 C
 LED toggle 15
-Tof detect 30 - distance: 209 mm
-Tof detect 31 - distance: 207 mm
+Tof detect 25 - distance: 137 mm
+Tof detect 26 - distance: 137 mm
 LED toggle 16
-Tof detect 32 - distance: 207 mm
-[BMP280] temp raw: 81 9B 00
-Temp: 29.40 C
-Tof detect 33 - distance: 209 mm
+Tof detect 27 - distance: 135 mm
+[BMP280] temp raw: 81 B9 00
+Temp: 29.55 C
 LED toggle 17
-Tof detect 34 - distance: 209 mm
-Tof detect 35 - distance: 208 mm
+Tof detect 28 - distance: 135 mm
+Tof detect 29 - distance: 136 mm
 LED toggle 18
-Tof detect 36 - distance: 210 mm
-[BMP280] temp raw: 81 99 00
-Temp: 29.39 C
-Tof detect 37 - distance: 209 mm
+Tof detect 30 - distance: 137 mm
+Tof detect 31 - distance: 136 mm
+[BMP280] temp raw: 81 B8 00
+Temp: 29.55 C
+Done. temp stopped.
 LED toggle 19
-Tof detect 38 - distance: 208 mm
-Tof detect 39 - distance: 206 mm
+Tof detect 32 - distance: 132 mm
 LED toggle 20
 Done. LED on.
-Tof detect 40 - distance: 208 mm
-[BMP280] temp raw: 81 9A 00
-Temp: 29.40 C
+Tof detect 33 - distance: 136 mm
+Tof detect 34 - distance: 137 mm
+Tof detect 35 - distance: 138 mm
+Tof detect 36 - distance: 135 mm
+Tof detect 37 - distance: 136 mm
+Tof detect 38 - distance: 136 mm
+Tof detect 39 - distance: 136 mm
+Tof detect 40 - distance: 136 mm
+Done. tof stopped.
 ```
