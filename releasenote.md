@@ -1,6 +1,19 @@
 Copyright (c) 2026. All rights reserved.
 
 ================================================================================
+RELEASE 2026-02-25
+- Refactor: aligned Core/app headers and sources to embedded-style formatting.
+
+- Updated RTOS application flow and logging integration:
+  - Core/Src/main.c
+  - Core/Src/freertos.c
+  - Core/app/Src/ic_app.c
+  - Core/app/Src/ic_logger_uart.c
+
+- Updated project documentation to reflect RTOS tasks, logger queue, and API changes:
+  - readme.md
+
+================================================================================
 RELEASE 2026-02-24
 - Refactor: added RTOS middle layer.
 

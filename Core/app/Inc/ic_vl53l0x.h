@@ -1,16 +1,16 @@
 #ifndef IC_VL53L0X_H
 #define IC_VL53L0X_H
 
+#include <stdint.h>
+
+#include "stm32f4xx_hal.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "stm32f4xx_hal.h"
-#include <stdint.h>
-
 /** VL53L0X API return status. */
-typedef enum
-{
+typedef enum {
     /** Operation completed successfully. */
     IC_VL53L0X_OK = 0,
     /** Generic I2C or device operation error. */
@@ -22,8 +22,7 @@ typedef enum
 } ic_vl53l0x_status_t;
 
 /** VL53L0X device handle. */
-typedef struct
-{
+typedef struct {
     /** HAL I2C handle used for sensor communication. */
     I2C_HandleTypeDef *hi2c;
     /** 8-bit I2C device address format used by HAL APIs. */
@@ -50,9 +49,10 @@ extern ic_vl53l0x_handle_t g_ic_vl53l0x;
  *
  * @return IC_VL53L0X_OK if successful, otherwise an error status.
  */
-ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t *dev,
-                                    I2C_HandleTypeDef    *hi2c,
-                                    uint8_t               i2c_addr);
+ic_vl53l0x_status_t
+ic_vl53l0x_init (ic_vl53l0x_handle_t* dev,
+                 I2C_HandleTypeDef* hi2c,
+                 uint8_t i2c_addr);
 
 /**
  * Performs a single-shot ranging measurement.
@@ -62,8 +62,9 @@ ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t *dev,
  *
  * @return IC_VL53L0X_OK if successful, otherwise an error status.
  */
-ic_vl53l0x_status_t ic_vl53l0x_read_distance_mm(ic_vl53l0x_handle_t *dev,
-                                                uint16_t             *distance_mm);
+ic_vl53l0x_status_t
+ic_vl53l0x_read_distance_mm (ic_vl53l0x_handle_t* dev,
+                             uint16_t* distance_mm);
 
 /**
  * Reads distance using the global VL53L0X handle.
@@ -72,7 +73,8 @@ ic_vl53l0x_status_t ic_vl53l0x_read_distance_mm(ic_vl53l0x_handle_t *dev,
  *
  * @return IC_VL53L0X_OK if successful, otherwise an error status.
  */
-ic_vl53l0x_status_t ic_vl53l0x_get_distance_mm(uint16_t *distance_mm);
+ic_vl53l0x_status_t
+ic_vl53l0x_get_distance_mm (uint16_t* distance_mm);
 
 #ifdef __cplusplus
 }

@@ -17,32 +17,37 @@ void
 ic_app_init (void);
 
 /**
- * @brief LED Task.
- * 週期性切換 LED（500ms）
+ * LED task entry.
+ *
+ * The task period is configured in the task implementation.
  */
 void
 ic_app_led_task (void* argument);
 
 /**
- * @brief TOF Task.
- * 週期性讀 VL53L0X（250ms）
+ * Time-of-flight (VL53L0X) task entry.
+ *
+ * The task period is configured in the task implementation.
  */
 void
 ic_app_tof_task (void* argument);
 
 /**
- * @brief Temperature Task.
- * 週期性讀 BMP280（1000ms）
+ * Temperature (BMP280) task entry.
+ *
+ * The task period is configured in the task implementation.
  */
 void
 ic_app_temp_task (void* argument);
 
+/** Mutex protecting shared I2C access. */
 extern osMutexId_t i2cMutexHandle;
 
-/** 所有感測器 init 完成後會 set 這個 flag */
+/** Application init completion event flags. */
 extern osEventFlagsId_t g_app_init_done;
-#define IC_APP_INIT_DONE_BIT  (1U << 0)
 
+/** Event bit indicating application init completion. */
+#define IC_APP_INIT_DONE_BIT  (1U << 0)
 
 #ifdef __cplusplus
 }

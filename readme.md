@@ -1,16 +1,17 @@
 ﻿# ic-stm32f4-sensor-demo
-更新日期：2026-02-24
+更新日期：2026-02-25
 
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
 示範如何使用 I2C 讀取多顆感測器，並透過 UART 輸出 log。
 
 > **EN summary**  
-> This repository contains a bare-metal STM32F446RE (NUCLEO-F446RE) demo project integrating two I2C sensors (BMP280 for temperature and VL53L0X ToF distance).  
+> This repository contains an STM32F446RE (NUCLEO-F446RE) demo project integrating two I2C sensors (BMP280 for temperature and VL53L0X ToF distance).  
 > It showcases:
 > - Clean separation between App / Drivers / HAL (CubeMX generated)
 > - Handle-based sensor drivers with status enums
-> - A lightweight logging abstraction on top of UART (ic_logger)
+> - A lightweight logging abstraction on top of UART with an RTOS queue/task (ic_logger)
+> - FreeRTOS/CMSIS-RTOS v2 task scheduling for the app flow
 > - A custom GCC+Python build flow decoupled from STM32CubeIDE
 
 ---
@@ -54,6 +55,8 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
    - `ic_app_temp_task()`：1000ms 週期讀 BMP280 溫度（10 次後結束）
 2. **RTOS 中間層（FreeRTOS/CMSIS-RTOS v2）**
    - `Core/Src/freertos.c`：任務/排程初始化與 RTOS 啟動點
+   - Logger queue + logger task（`g_log_queue`, `ic_log_task`）
+   - I2C mutex（`i2cMutexHandle`）與 app init event flags（`g_app_init_done`）
    - `Middlewares/Third_Party/FreeRTOS`：FreeRTOS 核心與 CMSIS-RTOS v2 介面
 3. **Driver / Middleware 層**
    - `ic_bmp280`：BMP280 驅動
@@ -86,6 +89,9 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測�
   +-----------+     +-------------+
   | ic_logger | --> |   USART2    |
   +-----------+     +-------------+
+        ^
+        |
+   log queue/task
 
   +--------+
   | ic_led |
@@ -237,12 +243,11 @@ typedef enum {
 
 void ic_log_init(UART_HandleTypeDef *huart);
 
-void ic_log_printf(ic_log_level_t level, const char *fmt, ...);
+int ic_log_write(const uint8_t *data, uint16_t len);
 
-#define IC_LOGI(fmt, ...) ic_log_printf(IC_LOG_LEVEL_INFO,  fmt, ##__VA_ARGS__)
-#define IC_LOGW(fmt, ...) ic_log_printf(IC_LOG_LEVEL_WARN,  fmt, ##__VA_ARGS__)
-#define IC_LOGE(fmt, ...) ic_log_printf(IC_LOG_LEVEL_ERROR, fmt, ##__VA_ARGS__)
-#define IC_LOGD(fmt, ...) ic_log_printf(IC_LOG_LEVEL_DEBUG, fmt, ##__VA_ARGS__)
+void ic_log_task(void *argument);
+
+int ic_log_printf(const char *fmt, ...);
 ```
 
 ### 5.5 ic_led
@@ -292,96 +297,19 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 示例輸出（實際 boot log）：
 
 ```
-Boot OK!
-Scanning I2C...
-Found device at 0x29
-Found device at 0x76
+[Nucleo_F446RE] Boot OK!
+[Nucleo_F446RE] Scanning I2C...
+[Nucleo_F446RE] Found device at 0x29
+[Nucleo_F446RE] Found device at 0x76
 [BMP280] chip_id read id=0x58 (expect 0x58 or 0x60)
 [BMP280] calib raw: 6AB4 670E FC18
 [BMP280] T1=27316 T2=26382 T3=-1000
 [BMP280] init OK
-VL53L0X init OK
-Tof detect 1 - distance: 135 mm
-[BMP280] temp raw: 81 B8 00
-Temp: 29.55 C
-LED toggle 1
-Tof detect 2 - distance: 138 mm
-LED toggle 2
-Tof detect 3 - distance: 139 mm
-Tof detect 4 - distance: 139 mm
-[BMP280] temp raw: 81 B7 00
-Temp: 29.54 C
-LED toggle 3
-Tof detect 5 - distance: 136 mm
-Tof detect 6 - distance: 135 mm
-LED toggle 4
-Tof detect 7 - distance: 137 mm
-[BMP280] temp raw: 81 B9 00
-Temp: 29.55 C
-LED toggle 5
-Tof detect 8 - distance: 136 mm
-Tof detect 9 - distance: 137 mm
-LED toggle 6
-Tof detect 10 - distance: 135 mm
-Tof detect 11 - distance: 136 mm
-[BMP280] temp raw: 81 BA 00
-Temp: 29.56 C
-LED toggle 7
-Tof detect 12 - distance: 137 mm
-LED toggle 8
-Tof detect 13 - distance: 136 mm
-Tof detect 14 - distance: 136 mm
-[BMP280] temp raw: 81 B9 00
-Temp: 29.55 C
-LED toggle 9
-Tof detect 15 - distance: 138 mm
-Tof detect 16 - distance: 137 mm
-LED toggle 10
-Tof detect 17 - distance: 138 mm
-[BMP280] temp raw: 81 B9 00
-Temp: 29.55 C
-LED toggle 11
-Tof detect 18 - distance: 137 mm
-Tof detect 19 - distance: 135 mm
-LED toggle 12
-Tof detect 20 - distance: 138 mm
-Tof detect 21 - distance: 137 mm
-[BMP280] temp raw: 81 B9 00
-Temp: 29.55 C
-LED toggle 13
-Tof detect 22 - distance: 136 mm
-LED toggle 14
-Tof detect 23 - distance: 136 mm
-Tof detect 24 - distance: 135 mm
-[BMP280] temp raw: 81 B8 00
-Temp: 29.55 C
-LED toggle 15
-Tof detect 25 - distance: 137 mm
-Tof detect 26 - distance: 137 mm
-LED toggle 16
-Tof detect 27 - distance: 135 mm
-[BMP280] temp raw: 81 B9 00
-Temp: 29.55 C
-LED toggle 17
-Tof detect 28 - distance: 135 mm
-Tof detect 29 - distance: 136 mm
-LED toggle 18
-Tof detect 30 - distance: 137 mm
-Tof detect 31 - distance: 136 mm
-[BMP280] temp raw: 81 B8 00
-Temp: 29.55 C
-Done. temp stopped.
-LED toggle 19
-Tof detect 32 - distance: 132 mm
-LED toggle 20
-Done. LED on.
-Tof detect 33 - distance: 136 mm
-Tof detect 34 - distance: 137 mm
-Tof detect 35 - distance: 138 mm
-Tof detect 36 - distance: 135 mm
-Tof detect 37 - distance: 136 mm
-Tof detect 38 - distance: 136 mm
-Tof detect 39 - distance: 136 mm
-Tof detect 40 - distance: 136 mm
-Done. tof stopped.
+[Nucleo_F446RE] Sensor init finish
+[LED] task started
+[LED] toggle 1
+[VL53L0X] Tof task started
+[VL53L0X] Tof detect 1 - distance: 135 mm
+[BMP280] Temp task started
+[BMP280] Temp detect 0 - Temp: 29.55 C
 ```

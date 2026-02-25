@@ -1,7 +1,13 @@
 #ifndef IC_BMP280_H
 #define IC_BMP280_H
 
+#include <stdint.h>
+
 #include "stm32f4xx_hal.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** BMP280 API return status. */
 typedef enum {
@@ -43,9 +49,10 @@ typedef struct {
  *
  * @return IC_BMP280_OK if successful, otherwise an error status.
  */
-ic_bmp280_status_t ic_bmp280_init(ic_bmp280_handle_t *dev,
-                                  I2C_HandleTypeDef  *hi2c,
-                                  uint8_t             i2c_addr);
+ic_bmp280_status_t
+ic_bmp280_init (ic_bmp280_handle_t* dev,
+                I2C_HandleTypeDef* hi2c,
+                uint8_t i2c_addr);
 
 /**
  * Reads and compensates current temperature from the sensor.
@@ -55,8 +62,9 @@ ic_bmp280_status_t ic_bmp280_init(ic_bmp280_handle_t *dev,
  *
  * @return IC_BMP280_OK if successful, otherwise an error status.
  */
-ic_bmp280_status_t ic_bmp280_read_temperature(ic_bmp280_handle_t *dev,
-                                              float              *temp_c);
+ic_bmp280_status_t
+ic_bmp280_read_temperature (ic_bmp280_handle_t* dev,
+                            float* temp_c);
 
 /** Global BMP280 handle used by convenience APIs. */
 extern ic_bmp280_handle_t g_ic_bmp280;
@@ -68,6 +76,11 @@ extern ic_bmp280_handle_t g_ic_bmp280;
  *
  * @return IC_BMP280_OK if successful, otherwise an error status.
  */
-ic_bmp280_status_t ic_bmp280_get_temperature(float *temp_c);
+ic_bmp280_status_t
+ic_bmp280_get_temperature (float* temp_c);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* IC_BMP280_H */
