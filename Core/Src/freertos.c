@@ -29,6 +29,7 @@
 #include "ic_app.h"
 #include "ic_logger.h"
 #include "usart.h"      // 為了拿到 huart2
+#include "ic_logger.h"  // new log
 
 /* USER CODE END Includes */
 
@@ -69,6 +70,12 @@ osThreadId_t tempTaskHandle;
 /* I2C mutex，用來保護 BMP280 / VL53L0X 的 I2C 存取 */
 osMutexId_t i2cMutexHandle;
 
+/* Logger queue + task */
+osMessageQueueId_t g_log_queue;
+osThreadId_t logTaskHandle;
+
+osEventFlagsId_t g_app_init_done;
+
 
 /* USER CODE END FunctionPrototypes */
 
@@ -83,6 +90,9 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+
+  /* IC: 建立 init 完成旗標 */
+  g_app_init_done = osEventFlagsNew(NULL);
 
   /* USER CODE END Init */
 
@@ -109,6 +119,26 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   
+
+  /* IC: New log thread*/
+  /* ---------- 建立 Log Queue ---------- */
+  const osMessageQueueAttr_t logQueue_attributes = {
+    .name = "logQueue"
+  };
+  g_log_queue = osMessageQueueNew(
+      16,                     // queue 深度：一次最多排 16 條訊息
+      sizeof(ic_log_msg_t),   // 每個元素大小
+      &logQueue_attributes);
+
+  /* ---------- 建立 Logger Task ---------- */
+  const osThreadAttr_t logTask_attributes = {
+    .name       = "logTask",
+    .priority   = (osPriority_t)osPriorityLow, // log 優先權可以低一點
+    //.priority   = (osPriority_t)osPriorityHigh,
+    .stack_size =  512 * 4 //1024* 4
+  };
+  logTaskHandle = osThreadNew(ic_log_task, NULL, &logTask_attributes);
+
   /* IC: RTOS task define*/
   // 1) 建 I2C mutex
   const osMutexAttr_t i2cMutex_attributes = {
@@ -120,7 +150,7 @@ void MX_FREERTOS_Init(void) {
   const osThreadAttr_t ledTask_attributes = {
     .name       = "ledTask",
     .priority   = (osPriority_t)osPriorityLow,
-    .stack_size = 128 * 4
+    .stack_size = 256 *4 //128 * 4    // 原本 128 * 4，先拉大到 4KB
   };
   ledTaskHandle = osThreadNew(ic_app_led_task, NULL, &ledTask_attributes);
 
@@ -128,7 +158,7 @@ void MX_FREERTOS_Init(void) {
   const osThreadAttr_t tofTask_attributes = {
     .name       = "tofTask",
     .priority   = (osPriority_t)osPriorityNormal,
-    .stack_size = 128 * 4
+    .stack_size = 256 * 4    // 原本 128 * 4
   };
   tofTaskHandle = osThreadNew(ic_app_tof_task, NULL, &tofTask_attributes);
 
@@ -136,7 +166,7 @@ void MX_FREERTOS_Init(void) {
   const osThreadAttr_t tempTask_attributes = {
     .name       = "tempTask",
     .priority   = (osPriority_t)osPriorityBelowNormal,
-    .stack_size = 256 * 4
+    .stack_size = 256 * 4    // 原本 256 * 4
   };
   tempTaskHandle = osThreadNew(ic_app_temp_task, NULL, &tempTask_attributes);
 
@@ -159,7 +189,7 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   //ic_log_init(&huart2);
-  //ic_app_init();
+  ic_app_init();
     
   /* Infinite loop */
   for(;;)

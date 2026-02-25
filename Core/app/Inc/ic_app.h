@@ -39,6 +39,11 @@ ic_app_temp_task (void* argument);
 
 extern osMutexId_t i2cMutexHandle;
 
+/** 所有感測器 init 完成後會 set 這個 flag */
+extern osEventFlagsId_t g_app_init_done;
+#define IC_APP_INIT_DONE_BIT  (1U << 0)
+
+
 #ifdef __cplusplus
 }
 #endif

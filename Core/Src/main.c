@@ -102,12 +102,15 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   ic_log_init(&huart2);     // logger 綁定 UART2, move to RTOS, add it back
-  ic_app_init();            // move to RTOS, add it back
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  //ic_app_init();            // move to RTOS StartDefaultTask
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
+
+
 
   /* Start scheduler */
   osKernelStart();
@@ -209,7 +212,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: ic_log_printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

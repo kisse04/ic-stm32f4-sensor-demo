@@ -82,9 +82,9 @@ static ic_bmp280_status_t ic_bmp280_read_calib(ic_bmp280_handle_t *dev)
     dev->T2 = (int16_t)((((uint16_t)raw[3]) << 8) | raw[2]);
     dev->T3 = (int16_t)((((uint16_t)raw[5]) << 8) | raw[4]);
 
-    printf("[BMP280] calib raw: %02X%02X %02X%02X %02X%02X\r\n",
+    ic_log_printf("[BMP280] calib raw: %02X%02X %02X%02X %02X%02X\r\n",
            raw[1], raw[0], raw[3], raw[2], raw[5], raw[4]);
-    printf("[BMP280] T1=%u T2=%d T3=%d\r\n", dev->T1, dev->T2, dev->T3);
+    ic_log_printf("[BMP280] T1=%u T2=%d T3=%d\r\n", dev->T1, dev->T2, dev->T3);
 
     return IC_BMP280_OK;
 }
@@ -124,11 +124,11 @@ ic_bmp280_status_t ic_bmp280_init(ic_bmp280_handle_t *dev,
 
     uint8_t id = 0U;
     if (ic_bmp280_read_bytes(dev, BMP280_REG_ID, &id, 1U) != 0) {
-        printf("[BMP280] read ID failed\r\n");
+        ic_log_printf("[BMP280] read ID failed\r\n");
         return IC_BMP280_ERROR;
     }
 
-    printf("[BMP280] chip_id read id=0x%02X (expect 0x58 or 0x60)\r\n", id);
+    ic_log_printf("[BMP280] chip_id read id=0x%02X (expect 0x58 or 0x60)\r\n", id);
     if ((id != 0x58U) && (id != 0x60U)) {
         return IC_BMP280_BAD_ID;
     }
@@ -141,13 +141,13 @@ ic_bmp280_status_t ic_bmp280_init(ic_bmp280_handle_t *dev,
     {
         const uint8_t ctrl_meas = (uint8_t)((1U << 5) | (1U << 2) | 0x03U);
         if (ic_bmp280_write_bytes(dev, BMP280_REG_CTRL_MEAS, &ctrl_meas, 1U) != 0) {
-            printf("[BMP280] write ctrl_meas failed\r\n");
+            ic_log_printf("[BMP280] write ctrl_meas failed\r\n");
             return IC_BMP280_ERROR;
         }
     }
 
     dev->is_initialized = 1U;
-    printf("[BMP280] init OK\r\n");
+    ic_log_printf("[BMP280] init OK\r\n");
     return IC_BMP280_OK;
 }
 
@@ -171,11 +171,11 @@ ic_bmp280_status_t ic_bmp280_read_temperature(ic_bmp280_handle_t *dev,
 
     uint8_t t[3] = {0U};
     if (ic_bmp280_read_bytes(dev, BMP280_REG_TEMP_MSB, t, 3U) != 0) {
-        printf("[BMP280] read temp raw failed\r\n");
+        ic_log_printf("[BMP280] read temp raw failed\r\n");
         return IC_BMP280_ERROR;
     }
 
-    printf("[BMP280] temp raw: %02X %02X %02X\r\n", t[0], t[1], t[2]);
+    //ic_log_printf("[BMP280] temp raw: %02X %02X %02X\r\n", t[0], t[1], t[2]);
 
     const int32_t adc_T = (((int32_t)t[0]) << 12) |
                           (((int32_t)t[1]) << 4) |

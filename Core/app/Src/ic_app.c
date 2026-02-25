@@ -39,7 +39,8 @@ void
 ic_app_init (void)
 {
     ic_led_init ();
-    printf ("Boot OK!\r\n");
+    ic_log_printf ("[Nucleo_F446RE] Boot OK!\r\n");
+    //printf("Boot OK!\r\n"); 
 
     s_led_count = 0;
     s_tof_count = 0;
@@ -57,27 +58,29 @@ ic_app_init (void)
                                                 &hi2c1,
                                                 IC_BMP280_I2C_ADDR_DEFAULT);
     if (bmp_st != IC_BMP280_OK) {
-        printf ("[BMP280] init failed, status=%d\r\n", (int) bmp_st);
+        ic_log_printf ("[BMP280] init failed, status=%d\r\n", (int) bmp_st);
     }
 
     if (ic_vl53l0x_init (&g_ic_vl53l0x,
                          &hi2c1,
                          IC_VL53L0X_I2C_ADDR_DEFAULT) != IC_VL53L0X_OK) {
-        printf ("VL53L0X init failed\r\n");
+        ic_log_printf ("[VL53L0X] init failed\r\n");
     }
-    else {
-        printf ("VL53L0X init OK\r\n");
-    }
+
+    /* ✅ 通知所有 tasks：init 完成，可以開始工作 */
+    ic_log_printf ("[Nucleo_F446RE] Sensor init finish\r\n");
+    osEventFlagsSet(g_app_init_done, IC_APP_INIT_DONE_BIT);
+
 }
 
 void
 ic_I2C_Scan (void)
 {
-    printf ("Scanning I2C...\r\n");
+    ic_log_printf ("[Nucleo_F446RE] Scanning I2C...\r\n");
 
     for (uint8_t addr = 1U; addr < 128U; addr++) {
         if (HAL_I2C_IsDeviceReady (&hi2c1, (uint16_t) (addr << 1), 1U, 10U) == HAL_OK) {
-            printf ("Found device at 0x%02X\r\n", addr);
+            ic_log_printf ("[Nucleo_F446RE] Found device at 0x%02X\r\n", addr);
         }
     }
 }
@@ -85,17 +88,24 @@ ic_I2C_Scan (void)
 void
 ic_app_led_task (void* argument)
 {
+    /* 等待 init 完成，最多等 10 秒，避免永久 block */
+    osEventFlagsWait(g_app_init_done,
+                     IC_APP_INIT_DONE_BIT,
+                     osFlagsWaitAny | osFlagsNoClear,  // NoClear：讓其他 task 也能收到
+                     10000U);
+    
+    ic_log_printf("[LED] task started\r\n");
     uint32_t led_count = 0;
 
     for (;;) {
         ic_led_toggle ();
         led_count++;
 
-        printf ("LED toggle %lu\r\n", (unsigned long) led_count);
+        ic_log_printf ("[LED] toggle %lu\r\n", led_count);
 
         if (led_count >= 20) {
             ic_led_on ();
-            printf ("Done. LED on.\r\n");
+            ic_log_printf ("[LED] Done. LED on.\r\n");
             /* 之後如果不想再動，可以暫停自己 */
             osThreadExit ();
         }
@@ -107,6 +117,13 @@ ic_app_led_task (void* argument)
 void
 ic_app_tof_task (void* argument)
 {
+    /* 等待 init 完成，最多等 10 秒，避免永久 block */
+    osEventFlagsWait(g_app_init_done,
+                     IC_APP_INIT_DONE_BIT,
+                     osFlagsWaitAny | osFlagsNoClear,  // NoClear：讓其他 task 也能收到
+                     10000U);
+
+    ic_log_printf("[VL53L0X] Tof task started\r\n");
     uint32_t tof_count = 0;
 
     for (;;) {
@@ -120,15 +137,15 @@ ic_app_tof_task (void* argument)
 
         if (st == IC_VL53L0X_OK) {
             tof_count++;
-            printf ("Tof detect %lu - distance: %u mm\r\n",
-                    (unsigned long) tof_count,
-                    (unsigned int) distance_mm);
+            ic_log_printf ("[VL53L0X] Tof detect %lu - distance: %u mm\r\n",
+                    tof_count,
+                    distance_mm);
         } else {
-            printf ("Tof read failed, status=%d\r\n", (int) st);
+            ic_log_printf ("[VL53L0X] Tof read failed, status=%d\r\n", (int) st);
         }
         
         if (tof_count >= 40) {
-            printf ("Done. tof stopped.\r\n");
+            ic_log_printf ("[VL53L0X] Done. Tof stopped.\r\n");
             /* 之後如果不想再動，可以暫停自己 */
             osThreadExit ();
         }
@@ -140,8 +157,14 @@ ic_app_tof_task (void* argument)
 void
 ic_app_temp_task (void* argument)
 {
+    /* 等待 init 完成，最多等 10 秒，避免永久 block */
+    osEventFlagsWait(g_app_init_done,
+                     IC_APP_INIT_DONE_BIT,
+                     osFlagsWaitAny | osFlagsNoClear,  // NoClear：讓其他 task 也能收到
+                     10000U);
+    
     uint32_t temp_count = 0;
-
+    ic_log_printf("[BMP280] Temp task started\r\n");
     for (;;) {
         float temp_c = 0.0f;
         ic_bmp280_status_t st;
@@ -152,16 +175,17 @@ ic_app_temp_task (void* argument)
 
         if (st == IC_BMP280_OK) {
             int32_t temp_x100 = (int32_t) (temp_c * 100.0f);
-            printf ("Temp: %ld.%02ld C\r\n",
+            ic_log_printf ("[BMP280] Temp detect %lu - Temp: %ld.%02ld C\r\n",
+                    temp_count,
                     temp_x100 / 100,
                     temp_x100 % 100);
             temp_count++;
         } else {
-            printf ("BMP280 read failed, status=%d\r\n", (int) st);
+            ic_log_printf ("[BMP280] Temp read failed, status=%d\r\n", (int) st);
         }
 
         if (temp_count >= 10) {
-            printf ("Done. temp stopped.\r\n");
+            ic_log_printf ("[BMP280] Done. Temp stopped.\r\n");
             /* 之後如果不想再動，可以暫停自己 */
             osThreadExit ();
         }
