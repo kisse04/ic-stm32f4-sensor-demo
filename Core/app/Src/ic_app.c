@@ -11,8 +11,8 @@
 #include "ic_bmp280.h"
 #include "ic_led.h"
 #include "ic_logger.h"
-#include "ic_vl53l0x.h"
 #include "ic_status.h"
+#include "ic_vl53l0x.h"
 
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_i2c.h"
@@ -26,6 +26,14 @@ extern I2C_HandleTypeDef hi2c1;
 /** Performs an I2C address scan on the configured bus. */
 static void
 ic_i2c_scan (void);
+
+/** Initializes the BMP280 sensor instance. */
+static void
+ic_app_init_bmp280 (void);
+
+/** Initializes the VL53L0X sensor instance. */
+static void
+ic_app_init_vl53l0x (void);
 
 void
 ic_app_init (void)
@@ -43,57 +51,45 @@ ic_app_init (void)
     (void) next_temp_ms;
 
     ic_i2c_scan ();
-
-    /*ic_bmp280_status_t bmp_st = ic_bmp280_init (&g_ic_bmp280,
-                                                &hi2c1,
-                                                IC_BMP280_I2C_ADDR_DEFAULT);
-    if (bmp_st != IC_BMP280_OK) {
-        ic_log_printf ("[BMP280] init failed, status=%d\r\n", (int) bmp_st);
-    }*/
     ic_app_init_bmp280 ();
     ic_app_init_vl53l0x ();
-    /*
-    if (ic_vl53l0x_init (&g_ic_vl53l0x,
-                         &hi2c1,
-                         IC_VL53L0X_I2C_ADDR_DEFAULT) != IC_VL53L0X_OK) {
-        ic_log_printf ("[VL53L0X] init failed\r\n");
-    }
-    */
+
     ic_log_printf ("[Nucleo_F446RE] Sensor init finish\r\n");
     osEventFlagsSet (g_app_init_done, IC_APP_INIT_DONE_BIT);
 }
 
-void ic_app_init_bmp280(void)
+static void
+ic_app_init_bmp280 (void)
 {
     ic_status_t bmp_st = ic_bmp280_init (&g_ic_bmp280,
                                          &hi2c1,
                                          IC_BMP280_I2C_ADDR_DEFAULT);
     if (IC_STATUS_IS_ERROR (bmp_st)) {
-         ic_log_printf ("[BMP280] init failed: %s (%s, code=%d)\r\n",
-                        IC_Status_ToString (bmp_st),
-                        IC_Status_CategoryString (bmp_st),
-                        (int) bmp_st);
+        ic_log_printf ("[BMP280] init failed: %s (%s, code=%d)\r\n",
+                       IC_Status_ToString (bmp_st),
+                       IC_Status_CategoryString (bmp_st),
+                       (int) bmp_st);
     } else {
-     ic_log_printf ("[BMP280] init OK\r\n");
+        ic_log_printf ("[BMP280] init OK\r\n");
     }
 }
 
-void ic_app_init_vl53l0x(void)
+static void
+ic_app_init_vl53l0x (void)
 {
     ic_status_t tof_st = ic_vl53l0x_init (&g_ic_vl53l0x,
                                           &hi2c1,
                                           IC_VL53L0X_I2C_ADDR_DEFAULT);
 
     if (IC_STATUS_IS_ERROR (tof_st)) {
-      ic_log_printf ("[VL53L0X] init failed: %s (%s, code=%d)\r\n",
-                      IC_Status_ToString (tof_st),
-                      IC_Status_CategoryString (tof_st),
+        ic_log_printf ("[VL53L0X] init failed: %s (%s, code=%d)\r\n",
+                       IC_Status_ToString (tof_st),
+                       IC_Status_CategoryString (tof_st),
                        (int) tof_st);
     } else {
-     ic_log_printf ("[VL53L0X] init OK\r\n");
+        ic_log_printf ("[VL53L0X] init OK\r\n");
     }
 }
-
 
 static void
 ic_i2c_scan (void)
@@ -118,42 +114,40 @@ ic_app_led_task (void* argument)
                       10000U);
 
     ic_log_printf ("[LED] task started\r\n");
-    uint32_t   led_count = 0;
-    ic_status_t st;
+    uint32_t led_count = 0U;
 
-    /* 如果你有在別的地方呼叫 ic_led_init()，這段可以省略；
-       如果沒有，建議在這裡補一次，確保 flag 被設起來。 */
-    st = ic_led_init();
-    if (IC_STATUS_IS_ERROR(st)) {
-        ic_log_printf("[LED] init failed: %s (%s, code=%d)\r\n",
-                      IC_Status_ToString(st),
-                      IC_Status_CategoryString(st),
-                      (int)st);
-        osThreadExit();   /* 或 while(1) 卡住，看你要怎麼設計 */
+    /* Ensure LED is initialized before toggling. */
+    ic_status_t st = ic_led_init ();
+    if (IC_STATUS_IS_ERROR (st)) {
+        ic_log_printf ("[LED] init failed: %s (%s, code=%d)\r\n",
+                       IC_Status_ToString (st),
+                       IC_Status_CategoryString (st),
+                       (int) st);
+        osThreadExit ();
     }
 
     for (;;) {
-        st = ic_led_toggle();
+        st = ic_led_toggle ();
         led_count++;
 
-        if (IC_STATUS_IS_OK(st)) {
+        if (IC_STATUS_IS_OK (st)) {
             ic_log_printf ("[LED] toggle %lu\r\n", led_count);
         } else {
             ic_log_printf ("[LED] toggle failed: %s (%s, code=%d)\r\n",
-                           IC_Status_ToString(st),
-                           IC_Status_CategoryString(st),
-                           (int)st);
+                           IC_Status_ToString (st),
+                           IC_Status_CategoryString (st),
+                           (int) st);
         }
 
         if (led_count >= 20U) {
-            st = ic_led_on();
-            if (IC_STATUS_IS_OK(st)) {
+            st = ic_led_on ();
+            if (IC_STATUS_IS_OK (st)) {
                 ic_log_printf ("[LED] Done. LED on.\r\n");
             } else {
                 ic_log_printf ("[LED] LED on failed: %s (%s, code=%d)\r\n",
-                               IC_Status_ToString(st),
-                               IC_Status_CategoryString(st),
-                               (int)st);
+                               IC_Status_ToString (st),
+                               IC_Status_CategoryString (st),
+                               (int) st);
             }
             osThreadExit ();
         }
@@ -173,10 +167,10 @@ ic_app_tof_task (void* argument)
                       10000U);
 
     ic_log_printf ("[VL53L0X] Tof task started\r\n");
-    uint32_t tof_count = 0;
+    uint32_t tof_count = 0U;
 
     for (;;) {
-        uint16_t   distance_mm = 0;
+        uint16_t distance_mm = 0U;
         ic_status_t st;
 
         osMutexAcquire (i2cMutexHandle, osWaitForever);
@@ -215,11 +209,10 @@ ic_app_temp_task (void* argument)
                       10000U);
 
     ic_log_printf ("[BMP280] Temp task started\r\n");
-    uint32_t temp_count = 0;
+    uint32_t temp_count = 0U;
 
     for (;;) {
         float temp_c = 0.0f;
-        //ic_bmp280_status_t st;
         ic_status_t st;
 
         osMutexAcquire (i2cMutexHandle, osWaitForever);
@@ -241,11 +234,11 @@ ic_app_temp_task (void* argument)
                            (int) st);
         }
 
-        if (temp_count >= 10) {
+        if (temp_count >= 10U) {
             ic_log_printf ("[BMP280] Done. Temp stopped.\r\n");
             osThreadExit ();
         }
 
-        osDelay (1000);
+        osDelay (1000U);
     }
 }

@@ -2,11 +2,11 @@
  * UART logger backend implementation and logger task.
  */
 
-#include "ic_logger.h"
-
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
+
+#include "ic_logger.h"
 
 #include "cmsis_os2.h"
 #include "stm32f4xx_hal.h"

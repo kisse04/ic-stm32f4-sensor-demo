@@ -5,10 +5,10 @@
  * temperature read flow over STM32 HAL I2C APIs.
  */
 
+#include <stdint.h>
+
 #include "ic_bmp280.h"
 #include "ic_logger.h"
-
-#include <stdint.h>
 
 /** BMP280 register map. */
 #define BMP280_REG_ID         0xD0U
@@ -47,17 +47,16 @@ ic_bmp280_read_bytes (ic_bmp280_handle_t* dev,
                                              buf,
                                              len,
                                              100U);
-    switch (st)
-    {
-        case HAL_OK:
-            return IC_STATUS_OK;
-        case HAL_BUSY:
-            return IC_STATUS_I2C_BUSY;
-        case HAL_TIMEOUT:
-            return IC_STATUS_I2C_TIMEOUT;
-        case HAL_ERROR:
-        default:
-            return IC_STATUS_BUS_ERROR;
+    switch (st) {
+    case HAL_OK:
+        return IC_STATUS_OK;
+    case HAL_BUSY:
+        return IC_STATUS_I2C_BUSY;
+    case HAL_TIMEOUT:
+        return IC_STATUS_I2C_TIMEOUT;
+    case HAL_ERROR:
+    default:
+        return IC_STATUS_BUS_ERROR;
     }
 }
 
@@ -79,17 +78,16 @@ ic_bmp280_write_bytes (ic_bmp280_handle_t* dev,
                                               (uint8_t*) buf,
                                               len,
                                               100U);
-    switch (st)
-    {
-        case HAL_OK:
-            return IC_STATUS_OK;
-        case HAL_BUSY:
-            return IC_STATUS_I2C_BUSY;
-        case HAL_TIMEOUT:
-            return IC_STATUS_I2C_TIMEOUT;
-        case HAL_ERROR:
-        default:
-            return IC_STATUS_BUS_ERROR;
+    switch (st) {
+    case HAL_OK:
+        return IC_STATUS_OK;
+    case HAL_BUSY:
+        return IC_STATUS_I2C_BUSY;
+    case HAL_TIMEOUT:
+        return IC_STATUS_I2C_TIMEOUT;
+    case HAL_ERROR:
+    default:
+        return IC_STATUS_BUS_ERROR;
     }
 }
 
@@ -101,19 +99,18 @@ ic_bmp280_read_calib (ic_bmp280_handle_t* dev)
 
     ic_status_t st = ic_bmp280_read_bytes (dev, BMP280_REG_CALIB_T1, raw, 6U);
     if (!IC_STATUS_IS_OK (st)) {
-        return st;  /* I2C/BUS 類錯誤往上丟 */
+        return st;
     }
 
     dev->T1 = (uint16_t) ((((uint16_t) raw[1]) << 8) | raw[0]);
-    dev->T2 = (int16_t)  ((((uint16_t) raw[3]) << 8) | raw[2]);
-    dev->T3 = (int16_t)  ((((uint16_t) raw[5]) << 8) | raw[4]);
+    dev->T2 = (int16_t) ((((uint16_t) raw[3]) << 8) | raw[2]);
+    dev->T3 = (int16_t) ((((uint16_t) raw[5]) << 8) | raw[4]);
 
     ic_log_printf ("[BMP280] calib raw: %02X%02X %02X%02X %02X%02X\r\n",
                    raw[1], raw[0], raw[3], raw[2], raw[5], raw[4]);
     ic_log_printf ("[BMP280] T1=%u T2=%d T3=%d\r\n",
                    dev->T1, dev->T2, dev->T3);
 
-    /* 若未來要做校正常數合理性檢查，可在這裡回傳 IC_STATUS_BMP280_CALIB_INVALID */
     return IC_STATUS_OK;
 }
 
@@ -146,18 +143,18 @@ ic_bmp280_init (ic_bmp280_handle_t* dev,
         return IC_STATUS_BOARD_CONFIG_ERROR;
     }
 
-    dev->hi2c         = hi2c;
-    dev->i2c_addr     = i2c_addr;
-    dev->T1           = 0U;
-    dev->T2           = 0;
-    dev->T3           = 0;
+    dev->hi2c = hi2c;
+    dev->i2c_addr = i2c_addr;
+    dev->T1 = 0U;
+    dev->T2 = 0;
+    dev->T3 = 0;
     dev->is_initialized = 0U;
 
     uint8_t id = 0U;
     ic_status_t st = ic_bmp280_read_bytes (dev, BMP280_REG_ID, &id, 1U);
     if (!IC_STATUS_IS_OK (st)) {
         ic_log_printf ("[BMP280] read ID failed (status=%d)\r\n", st);
-        return st;  /* 回傳 bus 類錯誤 */
+        return st;
     }
 
     ic_log_printf ("[BMP280] chip_id read id=0x%02X (expect 0x58 or 0x60)\r\n",
@@ -168,13 +165,10 @@ ic_bmp280_init (ic_bmp280_handle_t* dev,
 
     st = ic_bmp280_read_calib (dev);
     if (!IC_STATUS_IS_OK (st)) {
-        /* 讀 calib 失敗時，也可以視為 BMP280_READ_FAILED */
-        return (st == IC_STATUS_OK)
-                   ? IC_STATUS_BMP280_READ_FAILED
-                   : st;
+        return (st == IC_STATUS_OK) ? IC_STATUS_BMP280_READ_FAILED : st;
     }
 
-    /* 設定 ctrl_meas: oversampling x1, normal mode 等 */
+    /* Configure ctrl_meas: oversampling x1, normal mode. */
     {
         const uint8_t ctrl_meas = (uint8_t) ((1U << 5) | (1U << 2) | 0x03U);
         st = ic_bmp280_write_bytes (dev,
@@ -204,7 +198,7 @@ ic_bmp280_read_temperature (ic_bmp280_handle_t* dev,
         return IC_STATUS_BMP280_INIT_FAILED;
     }
 
-    /* 等待 measurement 完成（簡單讀 status, 目前沒特別檢查 bit） */
+    /* Read status register (if needed for future extensions). */
     {
         uint8_t status = 0U;
         ic_status_t st = ic_bmp280_read_bytes (dev,
@@ -232,7 +226,7 @@ ic_bmp280_read_temperature (ic_bmp280_handle_t* dev,
 
     const int32_t adc_T =
         (((int32_t) t[0]) << 12) |
-        (((int32_t) t[1]) << 4)  |
+        (((int32_t) t[1]) << 4) |
         (((int32_t) t[2]) >> 4);
 
     const int32_t temp_x100 = ic_bmp280_compensate_T_int32 (dev, adc_T);

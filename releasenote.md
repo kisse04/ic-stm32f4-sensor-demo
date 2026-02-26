@@ -1,6 +1,25 @@
 Copyright (c) 2026. All rights reserved.
 
 ================================================================================
+RELEASE 2026-02-26
+- Normalized comments, spacing, and API descriptions for Core/app modules:
+  - Core/app/Inc/ic_app.h
+  - Core/app/Inc/ic_bmp280.h
+  - Core/app/Inc/ic_led.h
+  - Core/app/Inc/ic_logger.h
+  - Core/app/Inc/ic_status.h
+  - Core/app/Inc/ic_vl53l0x.h
+  - Core/app/Src/ic_app.c
+  - Core/app/Src/ic_bmp280.c
+  - Core/app/Src/ic_led.c
+  - Core/app/Src/ic_logger_uart.c
+  - Core/app/Src/ic_status.c
+  - Core/app/Src/ic_vl53l0x.c
+
+- Updated documentation to match the unified ic_status API and module list:
+  - readme.md
+
+================================================================================
 RELEASE 2026-02-25
 - Refactor: aligned Core/app headers and sources to embedded-style formatting.
 
@@ -80,4 +99,3 @@ RELEASE 2026-02-11
 - Modularized application components (logger/LED) and fixed build script.
 
 - Initial baseline CubeIDE project import.
-

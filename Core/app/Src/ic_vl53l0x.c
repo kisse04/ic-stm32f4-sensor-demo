@@ -26,8 +26,8 @@
 
 /** Global VL53L0X handle for convenience APIs. */
 ic_vl53l0x_handle_t g_ic_vl53l0x = {
-    .hi2c          = NULL,
-    .i2c_addr      = IC_VL53L0X_I2C_ADDR_DEFAULT,
+    .hi2c = NULL,
+    .i2c_addr = IC_VL53L0X_I2C_ADDR_DEFAULT,
     .is_initialized = 0U
 };
 
@@ -50,17 +50,16 @@ ic_vl53l0x_i2c_read_reg (ic_vl53l0x_handle_t* dev,
                                              buf,
                                              len,
                                              100U);
-    switch (st)
-    {
-        case HAL_OK:
-            return IC_STATUS_OK;
-        case HAL_BUSY:
-            return IC_STATUS_I2C_BUSY;
-        case HAL_TIMEOUT:
-            return IC_STATUS_I2C_TIMEOUT;
-        case HAL_ERROR:
-        default:
-            return IC_STATUS_BUS_ERROR;
+    switch (st) {
+    case HAL_OK:
+        return IC_STATUS_OK;
+    case HAL_BUSY:
+        return IC_STATUS_I2C_BUSY;
+    case HAL_TIMEOUT:
+        return IC_STATUS_I2C_TIMEOUT;
+    case HAL_ERROR:
+    default:
+        return IC_STATUS_BUS_ERROR;
     }
 }
 
@@ -81,17 +80,16 @@ ic_vl53l0x_i2c_write_reg (ic_vl53l0x_handle_t* dev,
                                               (uint8_t*) buf,
                                               len,
                                               100U);
-    switch (st)
-    {
-        case HAL_OK:
-            return IC_STATUS_OK;
-        case HAL_BUSY:
-            return IC_STATUS_I2C_BUSY;
-        case HAL_TIMEOUT:
-            return IC_STATUS_I2C_TIMEOUT;
-        case HAL_ERROR:
-        default:
-            return IC_STATUS_BUS_ERROR;
+    switch (st) {
+    case HAL_OK:
+        return IC_STATUS_OK;
+    case HAL_BUSY:
+        return IC_STATUS_I2C_BUSY;
+    case HAL_TIMEOUT:
+        return IC_STATUS_I2C_TIMEOUT;
+    case HAL_ERROR:
+    default:
+        return IC_STATUS_BUS_ERROR;
     }
 }
 
@@ -106,12 +104,12 @@ ic_vl53l0x_init (ic_vl53l0x_handle_t* dev,
         return IC_STATUS_BOARD_CONFIG_ERROR;
     }
 
-    dev->hi2c           = hi2c;
-    dev->i2c_addr       = i2c_addr;
+    dev->hi2c = hi2c;
+    dev->i2c_addr = i2c_addr;
     dev->is_initialized = 0U;
 
     /* Read and validate model ID. */
-    uint8_t     id = 0U;
+    uint8_t id = 0U;
     ic_status_t st = ic_vl53l0x_i2c_read_reg (dev,
                                               IC_VL53L0X_REG_IDENTIFICATION_MODEL_ID,
                                               &id,
@@ -128,9 +126,7 @@ ic_vl53l0x_init (ic_vl53l0x_handle_t* dev,
         return IC_STATUS_VL53L0X_NOT_DETECTED;
     }
 
-    /* Configure interrupt behavior and clear any pending interrupt.
-     * This matches the original working implementation.
-     */
+    /* Configure interrupt behavior and clear any pending interrupt. */
     uint8_t cfg = 0x04U;
     st = ic_vl53l0x_i2c_write_reg (dev,
                                    IC_VL53L0X_REG_SYSTEM_INTERRUPT_CONFIG_GPIO,
@@ -167,9 +163,9 @@ ic_vl53l0x_read_distance_mm (ic_vl53l0x_handle_t* dev,
         return IC_STATUS_VL53L0X_INIT_FAILED;
     }
 
-    uint8_t  buf[2]     = { 0U };
-    uint8_t  status_reg = 0U;
-    uint8_t  cmd        = 0U;
+    uint8_t buf[2] = { 0U };
+    uint8_t status_reg = 0U;
+    uint8_t cmd = 0U;
     uint32_t start_tick = 0U;
 
     /* Start single-shot ranging. */
@@ -185,8 +181,7 @@ ic_vl53l0x_read_distance_mm (ic_vl53l0x_handle_t* dev,
 
     /* Poll interrupt status until measurement is done or timeout. */
     start_tick = HAL_GetTick ();
-    for (;;)
-    {
+    for (;;) {
         st = ic_vl53l0x_i2c_read_reg (dev,
                                       IC_VL53L0X_REG_RESULT_INTERRUPT_STATUS,
                                       &status_reg,
@@ -196,7 +191,6 @@ ic_vl53l0x_read_distance_mm (ic_vl53l0x_handle_t* dev,
         }
 
         if ((status_reg & 0x07U) != 0U) {
-            /* Measurement ready. */
             break;
         }
 
@@ -206,9 +200,7 @@ ic_vl53l0x_read_distance_mm (ic_vl53l0x_handle_t* dev,
         }
     }
 
-    /* Read distance (two bytes, mm).  Offset matches original working code:
-     * RESULT_RANGE_STATUS + 10.
-     */
+    /* Read distance (two bytes, mm). */
     st = ic_vl53l0x_i2c_read_reg (dev,
                                   IC_VL53L0X_REG_RESULT_DISTANCE_MILLI_HI,
                                   buf,
@@ -219,13 +211,6 @@ ic_vl53l0x_read_distance_mm (ic_vl53l0x_handle_t* dev,
     }
 
     *distance_mm = (uint16_t) ((((uint16_t) buf[0]) << 8) | (uint16_t) buf[1]);
-
-    /* Optionally check range and map to OUT_OF_RANGE, if desired. */
-#if 0
-    if (*distance_mm > 2000U) {  /* Example: treat >2 m as out-of-range. */
-        return IC_STATUS_VL53L0X_OUT_OF_RANGE;
-    }
-#endif
 
     /* Best-effort clear interrupt flag. */
     cmd = 0x01U;

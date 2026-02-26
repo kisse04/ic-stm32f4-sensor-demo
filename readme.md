@@ -1,73 +1,74 @@
-ï»¿# ic-stm32f4-sensor-demo
-æ›´æ–°æ—¥æœŸï¼š2026-02-25
+# ic-stm32f4-sensor-demo
+§ó·s¤é´Á¡G2026-02-26
 
 
-STM32F446RE (NUCLEO-F446RE) + BMP280 æº«åº¦æ„Ÿæ¸¬å™¨ + VL53L0X ToF è·é›¢æ„Ÿæ¸¬å™¨
-ç¤ºç¯„å¦‚ä½•ä½¿ç”¨ I2C è®€å–å¤šé¡†æ„Ÿæ¸¬å™¨ï¼Œä¸¦é€é UART è¼¸å‡º logã€‚
+STM32F446RE (NUCLEO-F446RE) + BMP280 ·Å«×·P´ú¾¹ + VL53L0X ToF ¶ZÂ÷·P´ú¾¹
+¥Ü½d¦p¦ó¨Ï¥Î I2C Åª¨ú¦hÁû·P´ú¾¹¡A¨Ã³z¹L UART ¿é¥X log¡C
 
 > **EN summary**  
 > This repository contains an STM32F446RE (NUCLEO-F446RE) demo project integrating two I2C sensors (BMP280 for temperature and VL53L0X ToF distance).  
 > It showcases:
 > - Clean separation between App / Drivers / HAL (CubeMX generated)
-> - Handle-based sensor drivers with status enums
+> - Handle-based sensor drivers with shared status codes (ic_status)
 > - A lightweight logging abstraction on top of UART with an RTOS queue/task (ic_logger)
 > - FreeRTOS/CMSIS-RTOS v2 task scheduling for the app flow
 > - A custom GCC+Python build flow decoupled from STM32CubeIDE
 
 ---
 
-## 1. å°ˆæ¡ˆç›®æ¨™
+## 1. ±M®×¥Ø¼Ğ
 
-- é€é STM32F4 Nucleo é–‹ç™¼æ¿ï¼Œæ•´åˆå…©é¡† I2C æ„Ÿæ¸¬å™¨ï¼š
-  - BMP280ï¼šæº«åº¦ / æ°£å£“ï¼ˆæ­¤å°ˆæ¡ˆç›®å‰ç¤ºç¯„æº«åº¦è®€å–ï¼‰
-  - VL53L0Xï¼šToF è·é›¢é‡æ¸¬
-- æä¾›ä¸€å¥— **ic_ å‰ç¶´** çš„é©…å‹• APIï¼Œæ–¹ä¾¿å¾ŒçºŒæ“´å……æˆ–ç§»æ¤åˆ°å…¶ä»–å°ˆæ¡ˆã€‚
-- ç¤ºç¯„ï¼š
-  - I2C å¤šè£ç½®ä½µè¯
-  - UART log æŠ½è±¡åŒ–ï¼ˆic_loggerï¼‰
-  - App / Drivers / HAL çš„åˆ†å±¤è¨­è¨ˆ
-
----
-
-## 2. ç¡¬é«”ç’°å¢ƒ
-
-- é–‹ç™¼æ¿ï¼šNUCLEO-F446RE
-- æ„Ÿæ¸¬å™¨ï¼š
-  - BMP280 æ¨¡çµ„ï¼ˆ3.3Vï¼‰
-  - VL53L0X æ¨¡çµ„ï¼ˆ3.3Vï¼‰
-- ä»‹é¢ï¼š
-  - I2C1ï¼šåŒä¸€æ¢ bus ä½µè¯ BMP280 + VL53L0X
-  - USART2ï¼šé€é ST-LINK Virtual COM Port é€£åˆ° PCï¼ˆPutty/TeraTermï¼‰
-
-> - SCL/SDA è…³ä½ï¼ˆåŒæ™‚ä½¿ç”¨ PB8/PB9 D15/D14ï¼‰
-> - VCC / GND æ¥è…³
+- ³z¹L STM32F4 Nucleo ¶}µoªO¡A¾ã¦X¨âÁû I2C ·P´ú¾¹¡G
+  - BMP280¡G·Å«× / ®ğÀ£¡]¦¹±M®×¥Ø«e¥Ü½d·Å«×Åª¨ú¡^
+  - VL53L0X¡GToF ¶ZÂ÷¶q´ú
+- ´£¨Ñ¤@®M **ic_ «eºó** ªºÅX°Ê API¡A¤è«K«áÄòÂX¥R©Î²¾´Ó¨ì¨ä¥L±M®×¡C
+- ¥Ü½d¡G
+  - I2C ¦h¸Ë¸m¨ÖÁp
+  - UART log ©â¶H¤Æ¡]ic_logger¡^
+  - App / Drivers / HAL ªº¤À¼h³]­p
 
 ---
 
-## 3. è»Ÿé«”æ¶æ§‹
+## 2. µwÅéÀô¹Ò
 
-å°ˆæ¡ˆåˆ†ç‚ºå››å±¤ï¼š
+- ¶}µoªO¡GNUCLEO-F446RE
+- ·P´ú¾¹¡G
+  - BMP280 ¼Ò²Õ¡]3.3V¡^
+  - VL53L0X ¼Ò²Õ¡]3.3V¡^
+- ¤¶­±¡G
+  - I2C1¡G¦P¤@±ø bus ¨ÖÁp BMP280 + VL53L0X
+  - USART2¡G³z¹L ST-LINK Virtual COM Port ³s¨ì PC¡]Putty/TeraTerm¡^
 
-1. **App å±¤ (`ic_app`)**
-   - `ic_app_init()`ï¼šåˆå§‹åŒ– LEDã€æ„Ÿæ¸¬å™¨èˆ‡ I2C æƒæ
-   - `ic_app_led_task()`ï¼š500ms é€±æœŸåˆ‡æ› LEDï¼ˆ20 æ¬¡å¾ŒçµæŸï¼‰
-   - `ic_app_tof_task()`ï¼š250ms é€±æœŸè®€ VL53L0Xï¼ˆ40 æ¬¡å¾ŒçµæŸï¼‰
-   - `ic_app_temp_task()`ï¼š1000ms é€±æœŸè®€ BMP280 æº«åº¦ï¼ˆ10 æ¬¡å¾ŒçµæŸï¼‰
-2. **RTOS ä¸­é–“å±¤ï¼ˆFreeRTOS/CMSIS-RTOS v2ï¼‰**
-   - `Core/Src/freertos.c`ï¼šä»»å‹™/æ’ç¨‹åˆå§‹åŒ–èˆ‡ RTOS å•Ÿå‹•é»
-   - Logger queue + logger taskï¼ˆ`g_log_queue`, `ic_log_task`ï¼‰
-   - I2C mutexï¼ˆ`i2cMutexHandle`ï¼‰èˆ‡ app init event flagsï¼ˆ`g_app_init_done`ï¼‰
-   - `Middlewares/Third_Party/FreeRTOS`ï¼šFreeRTOS æ ¸å¿ƒèˆ‡ CMSIS-RTOS v2 ä»‹é¢
-3. **Driver / Middleware å±¤**
-   - `ic_bmp280`ï¼šBMP280 é©…å‹•
-   - `ic_vl53l0x`ï¼šVL53L0X é©…å‹•
-   - `ic_led`ï¼šæ¿ä¸Š LED æ§åˆ¶
-   - `ic_logger`ï¼šlog ä»‹é¢ï¼ˆç›®å‰å¯¦ä½œç‚º UART è¼¸å‡ºï¼‰
-4. **HAL / BSP å±¤ï¼ˆCubeMX ç”Ÿæˆï¼‰**
-   - GPIO / I2C / USART åˆå§‹è¨­å®š
-   - clock / ä¸­æ–· / ç³»çµ±å•Ÿå‹•ç¨‹å¼ç¢¼
+> - SCL/SDA ¸}¦ì¡]¦P®É¨Ï¥Î PB8/PB9 D15/D14¡^
+> - VCC / GND ±µ¸}
 
-ç°¡åŒ–æ¶æ§‹åœ–ï¼š
+---
+
+## 3. ³nÅé¬[ºc
+
+±M®×¤À¬°¥|¼h¡G
+
+1. **App ¼h (`ic_app`)**
+   - `ic_app_init()`¡Gªì©l¤Æ LED¡B·P´ú¾¹»P I2C ±½´y
+   - `ic_app_led_task()`¡G500ms ¶g´Á¤Á´« LED¡]20 ¦¸«áµ²§ô¡^
+   - `ic_app_tof_task()`¡G250ms ¶g´ÁÅª VL53L0X¡]40 ¦¸«áµ²§ô¡^
+   - `ic_app_temp_task()`¡G1000ms ¶g´ÁÅª BMP280 ·Å«×¡]10 ¦¸«áµ²§ô¡^
+2. **RTOS ¤¤¶¡¼h¡]FreeRTOS/CMSIS-RTOS v2¡^**
+   - `Core/Src/freertos.c`¡G¥ô°È/±Æµ{ªì©l¤Æ»P RTOS ±Ò°ÊÂI
+   - Logger queue + logger task¡]`g_log_queue`, `ic_log_task`¡^
+   - I2C mutex¡]`i2cMutexHandle`¡^»P app init event flags¡]`g_app_init_done`¡^
+   - `Middlewares/Third_Party/FreeRTOS`¡GFreeRTOS ®Ö¤ß»P CMSIS-RTOS v2 ¤¶­±
+3. **Driver / Middleware ¼h**
+   - `ic_bmp280`¡GBMP280 ÅX°Ê
+   - `ic_vl53l0x`¡GVL53L0X ÅX°Ê
+   - `ic_led`¡GªO¤W LED ±±¨î
+   - `ic_logger`¡Glog ¤¶­±¡]¥Ø«e¹ê§@¬° UART ¿é¥X¡^
+   - `ic_status`¡G²Î¤@ªºª¬ºA½X»P¤ÀÃş¨ç¦¡
+4. **HAL / BSP ¼h¡]CubeMX ¥Í¦¨¡^**
+   - GPIO / I2C / USART ªì©l³]©w
+   - clock / ¤¤Â_ / ¨t²Î±Ò°Êµ{¦¡½X
+
+Â²¤Æ¬[ºc¹Ï¡G
 
 ```
           +----------------------+
@@ -106,7 +107,7 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 æº«åº¦æ„Ÿæ¸¬å™¨ + VL53L0X ToF è·é›¢æ„Ÿæ¸¬å
 
 ---
 
-## 4. å°ˆæ¡ˆç›®éŒ„çµæ§‹
+## 4. ±M®×¥Ø¿ıµ²ºc
 
 ```
 Core/
@@ -134,8 +135,9 @@ Core/
     Inc/
       ic_app.h         # App entry
       ic_bmp280.h      # BMP280 driver API
-      ic_led.h         # LED æ§åˆ¶ API
+      ic_led.h         # LED ±±¨î API
       ic_logger.h      # logger API (log level, printf)
+      ic_status.h      # status code helpers
       ic_vl53l0x.h     # VL53L0X driver API
 
     Src/
@@ -143,6 +145,7 @@ Core/
       ic_bmp280.c
       ic_led.c
       ic_logger_uart.c
+      ic_status.c
       ic_vl53l0x.c
 
 Middlewares/
@@ -156,7 +159,7 @@ Middlewares/
 
 ---
 
-## 5. ä¸»è¦æ¨¡çµ„èªªæ˜
+## 5. ¥D­n¼Ò²Õ»¡©ú
 
 ### 5.1 ic_app
 
@@ -168,28 +171,21 @@ void ic_app_temp_task(void *argument);
 ```
 
 - `ic_app_init()`
-  - åˆå§‹åŒ– LED
-  - åŸ·è¡Œ I2C æƒæ
-  - åˆå§‹åŒ– BMP280 / VL53L0X
+  - ªì©l¤Æ LED
+  - °õ¦æ I2C ±½´y
+  - ªì©l¤Æ BMP280 / VL53L0X
 - `ic_app_led_task()`
-  - 500ms é€±æœŸåˆ‡æ› LED
+  - 500ms ¶g´Á¤Á´« LED
 - `ic_app_tof_task()`
-  - 250ms é€±æœŸè®€å– VL53L0X è·é›¢
-  - I2C å­˜å–å‰å¾Œä½¿ç”¨ mutex
+  - 250ms ¶g´ÁÅª¨ú VL53L0X ¶ZÂ÷
+  - I2C ¦s¨ú«e«á¨Ï¥Î mutex
 - `ic_app_temp_task()`
-  - 1000ms é€±æœŸè®€å– BMP280 æº«åº¦
-  - I2C å­˜å–å‰å¾Œä½¿ç”¨ mutex
+  - 1000ms ¶g´ÁÅª¨ú BMP280 ·Å«×
+  - I2C ¦s¨ú«e«á¨Ï¥Î mutex
 
 ### 5.2 ic_bmp280
 
 ```c
-typedef enum {
-    IC_BMP280_OK = 0,
-    IC_BMP280_ERROR = -1,
-    IC_BMP280_BAD_ID = -2,
-    IC_BMP280_NOT_INITIALIZED = -3
-} ic_bmp280_status_t;
-
 typedef struct {
     I2C_HandleTypeDef *hi2c;
     uint8_t            i2c_addr;
@@ -199,36 +195,29 @@ typedef struct {
     uint8_t            is_initialized;
 } ic_bmp280_handle_t;
 
-ic_bmp280_status_t ic_bmp280_init(ic_bmp280_handle_t *dev,
-                                  I2C_HandleTypeDef  *hi2c,
-                                  uint8_t             i2c_addr);
+ic_status_t ic_bmp280_init(ic_bmp280_handle_t *dev,
+                           I2C_HandleTypeDef  *hi2c,
+                           uint8_t             i2c_addr);
 
-ic_bmp280_status_t ic_bmp280_read_temperature(ic_bmp280_handle_t *dev,
-                                              float              *temp_c);
+ic_status_t ic_bmp280_read_temperature(ic_bmp280_handle_t *dev,
+                                       float              *temp_c);
 ```
 
 ### 5.3 ic_vl53l0x
 
 ```c
-typedef enum {
-    IC_VL53L0X_OK = 0,
-    IC_VL53L0X_ERROR = -1,
-    IC_VL53L0X_TIMEOUT = -2,
-    IC_VL53L0X_NOT_INITIALIZED = -3
-} ic_vl53l0x_status_t;
-
 typedef struct {
     I2C_HandleTypeDef *hi2c;
     uint8_t            i2c_addr;
     uint8_t            is_initialized;
 } ic_vl53l0x_handle_t;
 
-ic_vl53l0x_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t *dev,
-                                   I2C_HandleTypeDef  *hi2c,
-                                   uint8_t             i2c_addr);
+ic_status_t ic_vl53l0x_init(ic_vl53l0x_handle_t *dev,
+                            I2C_HandleTypeDef  *hi2c,
+                            uint8_t             i2c_addr);
 
-ic_vl53l0x_status_t ic_vl53l0x_read_distance_mm(ic_vl53l0x_handle_t *dev,
-                                                uint16_t           *distance_mm);
+ic_status_t ic_vl53l0x_read_distance_mm(ic_vl53l0x_handle_t *dev,
+                                        uint16_t           *distance_mm);
 ```
 
 ### 5.4 ic_logger
@@ -259,23 +248,53 @@ void ic_led_on(void);
 void ic_led_off(void);
 ```
 
+### 5.6 ic_status
+
+```c
+typedef enum {
+    IC_STATUS_OK = 0,
+    IC_STATUS_BOARD_INIT_FAILED = 11,
+    IC_STATUS_BOARD_UNSUPPORTED_HW = 12,
+    IC_STATUS_BOARD_CONFIG_ERROR = 13,
+    IC_STATUS_BOARD_POWER_FAULT = 14,
+    IC_STATUS_BUS_ERROR = 21,
+    IC_STATUS_I2C_NACK = 22,
+    IC_STATUS_I2C_TIMEOUT = 23,
+    IC_STATUS_I2C_BUSY = 24,
+    IC_STATUS_LED_INVALID_CHANNEL = 31,
+    IC_STATUS_LED_GPIO_ERROR = 32,
+    IC_STATUS_BMP280_INIT_FAILED = 41,
+    IC_STATUS_BMP280_NOT_DETECTED = 42,
+    IC_STATUS_BMP280_READ_FAILED = 43,
+    IC_STATUS_BMP280_CALIB_INVALID = 44,
+    IC_STATUS_VL53L0X_INIT_FAILED = 51,
+    IC_STATUS_VL53L0X_NOT_DETECTED = 52,
+    IC_STATUS_VL53L0X_READ_FAILED = 53,
+    IC_STATUS_VL53L0X_OUT_OF_RANGE = 54,
+    IC_STATUS_UNKNOWN = 99
+} ic_status_t;
+
+const char *IC_Status_ToString(ic_status_t status);
+const char *IC_Status_CategoryString(ic_status_t status);
+```
+
 ---
 
-## 6. å»ºç½®èˆ‡ç‡’éŒ„
+## 6. «Ø¸m»P¿N¿ı
 
-### 6.1 ä½¿ç”¨ GCC + Python build è…³æœ¬
+### 6.1 ¨Ï¥Î GCC + Python build ¸}¥»
 
 ```bash
-# æ¸…é™¤èˆŠçš„è¼¸å‡º
+# ²M°£ÂÂªº¿é¥X
 python build.py --clean
 
-# ç·¨è­¯
+# ½sÄ¶
 python build.py
 ```
 
-ç·¨è­¯æˆåŠŸå¾Œï¼Œæœƒåœ¨ `out_gcc/`ï¼ˆæˆ–ä½ è¨­å®šçš„è¼¸å‡ºè³‡æ–™å¤¾ï¼‰ç”¢ç”Ÿ `.elf` / `.hex`ã€‚
+½sÄ¶¦¨¥\«á¡A·|¦b `out_gcc/`¡]©Î§A³]©wªº¿é¥X¸ê®Æ§¨¡^²£¥Í `.elf` / `.hex`¡C
 
-### 6.2 ä½¿ç”¨ STM32_Programmer_CLI ç‡’éŒ„
+### 6.2 ¨Ï¥Î STM32_Programmer_CLI ¿N¿ı
 
 ```bash
 set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
@@ -284,17 +303,17 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 
 ---
 
-## 7. åŸ·è¡Œ & UART log ç¯„ä¾‹
+## 7. °õ¦æ & UART log ½d¨Ò
 
-ä½¿ç”¨ Putty é€£ç·šè‡³ ST-LINK Virtual COMï¼š
+¨Ï¥Î Putty ³s½u¦Ü ST-LINK Virtual COM¡G
 
-- Serial lineï¼š`COM3`
-- Baud rateï¼š`115200`ï¼ˆè«‹ä¾å¯¦éš›è¨­å®šèª¿æ•´ï¼‰
-- Data bitsï¼š`8`
-- Parityï¼š`None`
-- Flow controlï¼š`None`
+- Serial line¡G`COM3`
+- Baud rate¡G`115200`¡]½Ğ¨Ì¹ê»Ú³]©w½Õ¾ã¡^
+- Data bits¡G`8`
+- Parity¡G`None`
+- Flow control¡G`None`
 
-ç¤ºä¾‹è¼¸å‡ºï¼ˆå¯¦éš› boot logï¼‰ï¼š
+¥Ü¨Ò¿é¥X¡]¹ê»Ú boot log¡^¡G
 
 ```
 [Nucleo_F446RE] Boot OK!
