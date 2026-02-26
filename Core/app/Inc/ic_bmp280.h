@@ -4,22 +4,11 @@
 #include <stdint.h>
 
 #include "stm32f4xx_hal.h"
+#include "ic_status.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** BMP280 API return status. */
-typedef enum {
-    /** Operation completed successfully. */
-    IC_BMP280_OK = 0,
-    /** Generic I2C or device operation error. */
-    IC_BMP280_ERROR = -1,
-    /** Unexpected chip ID was read from the sensor. */
-    IC_BMP280_BAD_ID = -2,
-    /** API called before successful initialization. */
-    IC_BMP280_NOT_INITIALIZED = -3
-} ic_bmp280_status_t;
 
 /** BMP280 device handle and calibration cache. */
 typedef struct {
@@ -43,13 +32,17 @@ typedef struct {
 /**
  * Initializes a BMP280 handle and validates sensor identity.
  *
- * @param[in,out] dev is the BMP280 handle to initialize.
- * @param[in] hi2c is the HAL I2C bus handle used by this device.
- * @param[in] i2c_addr is the BMP280 device address in HAL 8-bit format.
+ * @param[in,out] dev      BMP280 handle to initialize.
+ * @param[in]     hi2c     HAL I2C bus handle used by this device.
+ * @param[in]     i2c_addr BMP280 device address in HAL 8-bit format.
  *
- * @return IC_BMP280_OK if successful, otherwise an error status.
+ * @return IC_STATUS_OK on success, otherwise an ic_status_t error code.
+ *         - IC_STATUS_BOARD_CONFIG_ERROR      : dev 或 hi2c 為 NULL
+ *         - IC_STATUS_BUS_ERROR / I2C_xxx     : I2C 讀寫失敗
+ *         - IC_STATUS_BMP280_NOT_DETECTED     : chip ID 非 0x58 / 0x60
+ *         - IC_STATUS_BMP280_READ_FAILED      : 讀取校正常數失敗
  */
-ic_bmp280_status_t
+ic_status_t
 ic_bmp280_init (ic_bmp280_handle_t* dev,
                 I2C_HandleTypeDef* hi2c,
                 uint8_t i2c_addr);
@@ -57,12 +50,16 @@ ic_bmp280_init (ic_bmp280_handle_t* dev,
 /**
  * Reads and compensates current temperature from the sensor.
  *
- * @param[in] dev is the initialized BMP280 handle.
- * @param[out] temp_c is the measured temperature in degrees Celsius.
+ * @param[in]  dev    Initialized BMP280 handle.
+ * @param[out] temp_c Measured temperature in degrees Celsius.
  *
- * @return IC_BMP280_OK if successful, otherwise an error status.
+ * @return IC_STATUS_OK on success, otherwise an ic_status_t error code.
+ *         - IC_STATUS_BOARD_CONFIG_ERROR      : dev 或 temp_c 為 NULL
+ *         - IC_STATUS_BMP280_INIT_FAILED      : 尚未初始化 (is_initialized == 0)
+ *         - IC_STATUS_BUS_ERROR / I2C_xxx     : I2C 讀寫失敗
+ *         - IC_STATUS_BMP280_READ_FAILED      : 讀溫度暫存器失敗
  */
-ic_bmp280_status_t
+ic_status_t
 ic_bmp280_read_temperature (ic_bmp280_handle_t* dev,
                             float* temp_c);
 
@@ -72,11 +69,11 @@ extern ic_bmp280_handle_t g_ic_bmp280;
 /**
  * Reads temperature using the global BMP280 handle.
  *
- * @param[out] temp_c is the measured temperature in degrees Celsius.
+ * @param[out] temp_c Measured temperature in degrees Celsius.
  *
- * @return IC_BMP280_OK if successful, otherwise an error status.
+ * @return Same as ic_bmp280_read_temperature().
  */
-ic_bmp280_status_t
+ic_status_t
 ic_bmp280_get_temperature (float* temp_c);
 
 #ifdef __cplusplus
