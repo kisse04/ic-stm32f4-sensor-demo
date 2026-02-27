@@ -106,19 +106,22 @@ extern osEventFlagsId_t g_app_error_flags;
 
 /** Configuration for ic_app_led_task(). */
 typedef struct {
-    uint32_t max_count;   /**< Number of LED toggles before the task exits. */
+    uint32_t max_count;   /**< Number of LED toggles before the task exits.
+                           *   Set to 0 to run indefinitely.                */
     uint32_t interval_ms; /**< Delay between toggles (ms).                  */
 } ic_led_task_cfg_t;
 
 /** Configuration for ic_app_tof_task(). */
 typedef struct {
-    uint32_t max_count;   /**< Number of TOF readings before the task exits. */
+    uint32_t max_count;   /**< Number of TOF readings before the task exits.
+                           *   Set to 0 to run indefinitely.                */
     uint32_t interval_ms; /**< Delay between readings (ms).                  */
 } ic_tof_task_cfg_t;
 
 /** Configuration for ic_app_temp_task(). */
 typedef struct {
-    uint32_t max_count;   /**< Number of temperature readings before exit.   */
+    uint32_t max_count;   /**< Number of temperature readings before exit.
+                           *   Set to 0 to run indefinitely.                */
     uint32_t interval_ms; /**< Delay between readings (ms).                  */
 } ic_temp_task_cfg_t;
 

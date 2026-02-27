@@ -14,10 +14,14 @@
 /** UART instance used by logger APIs. */
 static UART_HandleTypeDef* s_log_uart = NULL;
 
+/** Cumulative count of messages dropped due to a full log queue. */
+static uint32_t s_log_dropped = 0U;
+
 void
 ic_log_init (UART_HandleTypeDef* huart)
 {
-    s_log_uart = huart;
+    s_log_uart   = huart;
+    s_log_dropped = 0U;
 }
 
 int
@@ -69,8 +73,15 @@ ic_log_printf (const char* fmt, ...)
     msg.len = (uint16_t) n;
 
     if (osMessageQueuePut (g_log_queue, &msg, 0, 0) != osOK) {
-        return 0;
+        s_log_dropped++;  /* queue full: count the dropped message */
+        return -1;
     }
 
     return n;
+}
+
+uint32_t
+ic_log_get_dropped_count (void)
+{
+    return s_log_dropped;
 }

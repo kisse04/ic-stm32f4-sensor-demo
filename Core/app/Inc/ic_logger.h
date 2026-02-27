@@ -68,10 +68,20 @@ ic_log_task (void* argument);
  *
  * @param[in] fmt is a printf-style format string.
  *
- * @return Number of bytes written into the queue buffer, or 0 on failure.
+ * @return Number of bytes written into the queue buffer, or -1 if the queue
+ *         is full and the message was dropped. Returns 0 on format error.
  */
 int
 ic_log_printf (const char* fmt, ...);
+
+/**
+ * Returns the total number of log messages dropped due to a full queue
+ * since the last call to ic_log_init().
+ *
+ * @return Cumulative dropped message count.
+ */
+uint32_t
+ic_log_get_dropped_count (void);
 
 #ifdef __cplusplus
 }

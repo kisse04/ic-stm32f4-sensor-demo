@@ -157,6 +157,10 @@ ic_app_init (void)
     }
 
     ic_log_printf ("[Nucleo_F446RE] Boot OK!\r\n");
+    /* NOTE: g_log_queue is created in freertos.c before osKernelStart(),
+     * so ic_log_printf is safe to call here.  A return-value check is
+     * omitted intentionally: if the queue is full this early in boot,
+     * a dropped boot message is acceptable. */
 
 #ifdef IC_DEBUG_I2C_SCAN
     ic_i2c_scan ();
@@ -201,7 +205,8 @@ ic_app_led_task (void* argument)
     ic_log_printf ("[LED] task started (max=%lu, interval=%lu ms)\r\n",
                    cfg->max_count, cfg->interval_ms);
 
-    uint32_t led_count = 0U;
+    const uint8_t infinite  = (cfg->max_count == 0U);
+    uint32_t      led_count = 0U;
 
     for (;;) {
         st = ic_led_toggle ();
@@ -216,7 +221,7 @@ ic_app_led_task (void* argument)
                            (int) st);
         }
 
-        if (led_count >= cfg->max_count) {
+        if (!infinite && (led_count >= cfg->max_count)) {
             st = ic_led_on ();
             if (IC_STATUS_IS_OK (st)) {
                 ic_log_printf ("[LED] Done. LED on.\r\n");
@@ -255,7 +260,8 @@ ic_app_tof_task (void* argument)
     ic_log_printf ("[VL53L0X] TOF task started (max=%lu, interval=%lu ms)\r\n",
                    cfg->max_count, cfg->interval_ms);
 
-    uint32_t tof_count = 0U;
+    const uint8_t infinite  = (cfg->max_count == 0U);
+    uint32_t      tof_count = 0U;
 
     for (;;) {
         uint16_t  distance_mm = 0U;
@@ -276,7 +282,16 @@ ic_app_tof_task (void* argument)
                            (int) st);
         }
 
-        if (tof_count >= cfg->max_count) {
+        /* Warn once whenever the logger has silently dropped messages.
+         * This is the only place where the return value of ic_log_printf
+         * matters: if even this warning is dropped we accept it – at least
+         * the counter keeps accumulating and will be printed next iteration. */
+        uint32_t dropped = ic_log_get_dropped_count ();
+        if (dropped > 0U) {
+            ic_log_printf ("[WARN] log queue full – %lu msg(s) dropped\r\n", dropped);
+        }
+
+        if (!infinite && (tof_count >= cfg->max_count)) {
             ic_log_printf ("[VL53L0X] Done. TOF stopped.\r\n");
             osThreadExit ();
         }
@@ -307,7 +322,8 @@ ic_app_temp_task (void* argument)
     ic_log_printf ("[BMP280] Temp task started (max=%lu, interval=%lu ms)\r\n",
                    cfg->max_count, cfg->interval_ms);
 
-    uint32_t temp_count = 0U;
+    const uint8_t infinite   = (cfg->max_count == 0U);
+    uint32_t      temp_count = 0U;
 
     for (;;) {
         float       temp_c = 0.0f;
@@ -332,7 +348,7 @@ ic_app_temp_task (void* argument)
                            (int) st);
         }
 
-        if (temp_count >= cfg->max_count) {
+        if (!infinite && (temp_count >= cfg->max_count)) {
             ic_log_printf ("[BMP280] Done. Temp stopped.\r\n");
             osThreadExit ();
         }
