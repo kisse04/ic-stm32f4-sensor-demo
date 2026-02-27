@@ -75,6 +75,7 @@ osMessageQueueId_t g_log_queue;
 osThreadId_t logTaskHandle;
 
 osEventFlagsId_t g_app_init_done;
+osEventFlagsId_t g_app_error_flags; //ic 260227
 
 
 /* USER CODE END FunctionPrototypes */
@@ -93,6 +94,7 @@ void MX_FREERTOS_Init(void) {
 
   /* IC: 建立 init 完成旗標 */
   g_app_init_done = osEventFlagsNew(NULL);
+  g_app_error_flags = osEventFlagsNew(NULL); //ic 260227
 
   /* USER CODE END Init */
 
