@@ -10,9 +10,15 @@
 
 build.py --clean
 build.py
-set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
-STM32_Programmer_CLI.exe -c port=SWD -w out_gcc\nucleo_f446_uart_test01.hex -v -rst
+build.py --debug                  # enable IC_DEBUG_I2C_SCAN at compile time
+build.py --flash                  # build then flash via STM32_Programmer_CLI
+build.py --debug --flash          # debug build + flash in one step
 
+# GCC toolchain path (priority: --gcc-bin > STM32_GCC_BIN env > _DEFAULT_GCC_BIN)
+set STM32_GCC_BIN=C:\...\gnu-tools-for-stm32\...\tools\bin
+
+# Programmer path (priority: --programmer-bin > STM32_PROGRAMMER_BIN env > _DEFAULT_PROGRAMMER_BIN)
+set STM32_PROGRAMMER_BIN=C:\...\cubeprogrammer\...\tools\bin
 
 '''
 
@@ -40,6 +46,31 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+# =============================================================================
+# Global defaults – edit here instead of hunting for argparse defaults
+# =============================================================================
+
+# Fallback GCC toolchain bin folder (used when --gcc-bin is not given AND
+# the STM32_GCC_BIN environment variable is not set).
+_DEFAULT_GCC_BIN = (
+    r"C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins"
+    r"\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32"
+    r".13.3.rel1.win32_1.0.100.202509120712\tools\bin"
+)
+
+# Fallback STM32_Programmer_CLI bin folder (used when --programmer-bin is not
+# given AND the STM32_PROGRAMMER_BIN environment variable is not set).
+_DEFAULT_PROGRAMMER_BIN = (
+    r"C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins"
+    r"\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer"
+    r".win32_2.2.300.202508131133\tools\bin"
+)
+
+DEFAULT_PROJECT  = "nucleo_f446_uart_test01"
+DEFAULT_OUT      = "out_gcc"
+DEFAULT_LOG      = "log.txt"
+DEFAULT_LDSCRIPT = "STM32F446RETX_FLASH.ld"
 
 
 def write_log(log_path: Path, msg: str) -> None:
@@ -150,31 +181,67 @@ def rmtree_retry(path: Path, retries: int = 10, delay_s: float = 0.2) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="GCC build script (ST-makefile compatible)")
-    parser.add_argument("--project", default="nucleo_f446_uart_test01")
-    parser.add_argument("--out", default="out_gcc")
-    parser.add_argument("--log", default="log.txt")
+    parser.add_argument("--project",  default=DEFAULT_PROJECT)
+    parser.add_argument("--out",      default=DEFAULT_OUT)
+    parser.add_argument("--log",      default=DEFAULT_LOG)
     parser.add_argument(
         "--gcc-bin",
-        default=r"C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712\tools\bin",
-        help="Path to arm-none-eabi toolchain bin folder",
+        default=None,  # resolved below: env var → fallback constant
+        help=(
+            "Path to arm-none-eabi toolchain bin folder. "
+            "Defaults to STM32_GCC_BIN env var, then the path in _DEFAULT_GCC_BIN."
+        ),
     )
-    parser.add_argument("--ldscript", default="STM32F446RETX_FLASH.ld")
+    parser.add_argument(
+        "--programmer-bin",
+        default=None,  # resolved below: env var → fallback constant
+        help=(
+            "Path to STM32_Programmer_CLI bin folder. "
+            "Defaults to STM32_PROGRAMMER_BIN env var, then the path in _DEFAULT_PROGRAMMER_BIN."
+        ),
+    )
+    parser.add_argument("--ldscript", default=DEFAULT_LDSCRIPT)
 
     # Enhancements
-    parser.add_argument("--clean", action="store_true", help="Remove out dir and log then exit")
-    parser.add_argument("--rebuild", action="store_true", help="Force rebuild (ignore incremental)")
+    parser.add_argument("--clean",      action="store_true", help="Remove out dir and log then exit")
+    parser.add_argument("--rebuild",    action="store_true", help="Force rebuild (ignore incremental)")
     parser.add_argument("--no-objdump", action="store_true", help="Skip generating .list by objdump")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Inject -DIC_DEBUG_I2C_SCAN so the I2C bus scan runs at boot",
+    )
+    parser.add_argument(
+        "--flash",
+        action="store_true",
+        help="After a successful build, flash the HEX via STM32_Programmer_CLI",
+    )
     args = parser.parse_args()
+
+    # Resolve gcc-bin: CLI arg > env var > built-in fallback
+    gcc_bin_str = (
+        args.gcc_bin
+        or os.environ.get("STM32_GCC_BIN")
+        or _DEFAULT_GCC_BIN
+    )
+
+    # Resolve programmer-bin: CLI arg > env var > built-in fallback
+    programmer_bin_str = (
+        args.programmer_bin
+        or os.environ.get("STM32_PROGRAMMER_BIN")
+        or _DEFAULT_PROGRAMMER_BIN
+    )
 
     # Match bat: cd /d "%~dp0"
     script_dir = Path(__file__).resolve().parent
     os.chdir(script_dir)
 
-    project = args.project
-    out_dir = Path(args.out)
-    log_path = Path(args.log)
-    gcc_bin = Path(args.gcc_bin)
-    ldscript = Path(args.ldscript)
+    project        = args.project
+    out_dir        = Path(args.out)
+    log_path       = Path(args.log)
+    gcc_bin        = Path(gcc_bin_str)
+    programmer_bin = Path(programmer_bin_str)
+    ldscript       = Path(args.ldscript)
 
     # Clean mode
     if args.clean:
@@ -205,7 +272,10 @@ def main() -> int:
     write_log(log_path, f"PROJECT={project}")
     write_log(log_path, f"OUT={out_dir}")
     write_log(log_path, f"GCC_BIN={gcc_bin}")
+    write_log(log_path, f"PROGRAMMER_BIN={programmer_bin}")
     write_log(log_path, f"REBUILD={args.rebuild}")
+    write_log(log_path, f"DEBUG={args.debug}")
+    write_log(log_path, f"FLASH={args.flash}")
 
     # Env: set PATH=%GCC_BIN%;%PATH%
     env = os.environ.copy()
@@ -265,6 +335,12 @@ def main() -> int:
         "-DSTM32F446xx",
         "-DUSE_HAL_DRIVER",
     ]
+
+    # Inject debug-only defines via --debug flag
+    if args.debug:
+        cflags.append("-DIC_DEBUG_I2C_SCAN")
+        print("[INFO] --debug: IC_DEBUG_I2C_SCAN enabled (I2C bus scan will run at boot)")
+        write_log(log_path, "[INFO] IC_DEBUG_I2C_SCAN injected via --debug")
 
     # LDFLAGS: mirror the ST makefile line you pasted
     # NOTE: ST uses absolute -T"...\STM32F446RETX_FLASH.ld"
@@ -556,6 +632,37 @@ def main() -> int:
     write_log(log_path, f"  {out_dir / (project + '.map')}")
     write_log(log_path, f"  {obj_list}")
     write_log(log_path, "===== DONE =====")
+
+    # [Optional] Flash via STM32_Programmer_CLI
+    if args.flash:
+        programmer_exe = (programmer_bin / "STM32_Programmer_CLI.exe").resolve()
+
+        print("========================================")
+        print("Flashing via STM32_Programmer_CLI...")
+        print("========================================")
+        write_log(log_path, "===== Flash =====")
+        write_log(log_path, f"PROGRAMMER_EXE={programmer_exe}")
+
+        if not programmer_exe.exists():
+            die(log_path,
+                f"STM32_Programmer_CLI.exe not found: {programmer_exe}\n"
+                "  Set STM32_PROGRAMMER_BIN env var or pass --programmer-bin.")
+
+        flash_cmd = [
+            str(programmer_exe),
+            "-c", "port=SWD",
+            "-w", str(hex_file),
+            "-v",
+            "-rst",
+        ]
+        rc = run_cmd(log_path, flash_cmd, env=env)
+        if rc != 0:
+            die(log_path, "Flash failed")
+
+        print("[OK] Flash done.")
+        write_log(log_path, "[OK] Flash done.")
+        write_log(log_path, "===== FLASH DONE =====")
+
     return 0
 
 
