@@ -1,71 +1,83 @@
-ï»¿# ic-stm32f4-sensor-demo
+# ic-stm32f4-sensor-demo
 
-**README Languages:**  
-[English](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme.md) | [ä¸­æ–‡èªªæ˜Ž](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme_zh-TW.md)
+**README Languages:** 
+[English](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme.md) | [¤¤¤å»¡©ú](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme_zh-TW.md)
 
-Last updated: 2026-02-27
+§ó·s¤é´Á¡G2026-02-27
 
-STM32F446RE (NUCLEO-F446RE) + BMP280 temperature sensor + VL53L0X ToF distance sensor demo.
-This project demonstrates how to read multiple sensors over I2C and output logs through UART.
 
----
+STM32F446RE (NUCLEO-F446RE) + BMP280 ·Å«×·P´ú¾¹ + VL53L0X ToF ¶ZÂ÷·P´ú¾¹
+¥Ü½d¦p¦ó¨Ï¥Î I2C Åª¨ú¦hÁû·P´ú¾¹¡A¨Ã³z¹L UART ¿é¥X log¡C
 
-## 1. Project Goals
-
-- Integrate two I2C sensors on STM32F4 Nucleo:
-  - BMP280: temperature / pressure (this project currently demonstrates temperature reading)
-  - VL53L0X: ToF distance measurement
-- Provide a consistent `ic_`-prefixed driver API for future extension and portability.
-- Demonstrate:
-  - Multi-device I2C bus usage
-  - UART logging abstraction (`ic_logger`)
-  - Layered architecture: App / Drivers / HAL
-
----
-
-## 2. Hardware Setup
-
-- Board: NUCLEO-F446RE
-- Sensors:
-  - BMP280 module (3.3V)
-  - VL53L0X module (3.3V)
-- Interfaces:
-  - I2C1: shared bus for BMP280 + VL53L0X
-  - USART2: ST-LINK Virtual COM Port to PC (Putty/TeraTerm)
-
-> - SCL/SDA pins (PB8/PB9, D15/D14)
-> - VCC / GND pins
+> **EN summary**  
+> This repository contains an STM32F446RE (NUCLEO-F446RE) demo project integrating two I2C sensors (BMP280 for temperature and VL53L0X ToF distance).  
+> It showcases:
+> - Clean separation between App / Drivers / HAL (CubeMX generated)
+> - Handle-based sensor drivers with shared status codes (ic_status)
+> - A lightweight logging abstraction on top of UART with an RTOS queue/task (ic_logger)
+> - FreeRTOS/CMSIS-RTOS v2 task scheduling for the app flow
+> - Retry-based sensor init, task-level graceful abort, and I2C mutex protection
+> - Optional non-stop task mode (`max_count=0`) and dropped-log counting on queue overflow
+> - A custom GCC+Python build flow decoupled from STM32CubeIDE
 
 ---
 
-## 3. Software Architecture
+## 1. ±M®×¥Ø¼Ð
 
-The project is split into four layers:
+- ³z¹L STM32F4 Nucleo ¶}µoªO¡A¾ã¦X¨âÁû I2C ·P´ú¾¹¡G
+  - BMP280¡G·Å«× / ®ðÀ£¡]¦¹±M®×¥Ø«e¥Ü½d·Å«×Åª¨ú¡^
+  - VL53L0X¡GToF ¶ZÂ÷¶q´ú
+- ´£¨Ñ¤@®M **ic_ «eºó** ªºÅX°Ê API¡A¤è«K«áÄòÂX¥R©Î²¾´Ó¨ì¨ä¥L±M®×¡C
+- ¥Ü½d¡G
+  - I2C ¦h¸Ë¸m¨ÖÁp
+  - UART log ©â¶H¤Æ¡]ic_logger¡^
+  - App / Drivers / HAL ªº¤À¼h³]­p
 
-1. **App layer (`ic_app`)**
-   - `ic_app_init()`: initialize LED and sensors with retry logic
-   - `ic_app_led_task()`: toggle LED every 500 ms by default (stops after 20 iterations by default)
-   - `ic_app_tof_task()`: read VL53L0X every 250 ms by default (stops after 40 iterations by default)
-   - `ic_app_temp_task()`: read BMP280 temperature every 1000 ms by default (stops after 10 iterations by default)
-   - Task behavior can be overridden via `ic_*_task_cfg_t` arguments (`max_count=0` means run indefinitely)
-2. **RTOS mid layer (FreeRTOS/CMSIS-RTOS v2)**
-   - `Core/Src/freertos.c`: task scheduling init and RTOS startup entry
-   - Logger queue + logger task (`g_log_queue`, `ic_log_task`)
-   - I2C mutex (`i2cMutexHandle`) and app event flags (`g_app_init_done`, `g_app_error_flags`)
-   - `Middlewares/Third_Party/FreeRTOS`: FreeRTOS core and CMSIS-RTOS v2 interface
-3. **Driver / Middleware layer**
-   - `ic_bmp280`: BMP280 driver
-   - `ic_vl53l0x`: VL53L0X driver
-   - `ic_led`: onboard LED control
-   - `ic_logger`: logging interface (currently UART-based)
-   - `ic_status`: unified status codes and category helpers
-4. **HAL / BSP layer (CubeMX generated)**
-   - GPIO / I2C / USART initialization
-   - Clock / interrupts / system startup code
+---
 
-Simplified architecture:
+## 2. µwÅéÀô¹Ò
 
-```text
+- ¶}µoªO¡GNUCLEO-F446RE
+- ·P´ú¾¹¡G
+  - BMP280 ¼Ò²Õ¡]3.3V¡^
+  - VL53L0X ¼Ò²Õ¡]3.3V¡^
+- ¤¶­±¡G
+  - I2C1¡G¦P¤@±ø bus ¨ÖÁp BMP280 + VL53L0X
+  - USART2¡G³z¹L ST-LINK Virtual COM Port ³s¨ì PC¡]Putty/TeraTerm¡^
+
+> - SCL/SDA ¸}¦ì¡]¦P®É¨Ï¥Î PB8/PB9 D15/D14¡^
+> - VCC / GND ±µ¸}
+
+---
+
+## 3. ³nÅé¬[ºc
+
+±M®×¤À¬°¥|¼h¡G
+
+1. **App ¼h (`ic_app`)**
+   - `ic_app_init()`¡Gªì©l¤Æ LED¡A¨Ã¥H retry ¾÷¨îªì©l¤Æ·P´ú¾¹
+   - `ic_app_led_task()`¡G¹w³] 500ms ¶g´Á¤Á´« LED¡]¹w³] 20 ¦¸«áµ²§ô¡^
+   - `ic_app_tof_task()`¡G¹w³] 250ms ¶g´ÁÅª VL53L0X¡]¹w³] 40 ¦¸«áµ²§ô¡^
+   - `ic_app_temp_task()`¡G¹w³] 1000ms ¶g´ÁÅª BMP280 ·Å«×¡]¹w³] 10 ¦¸«áµ²§ô¡^
+   - ³z¹L task argument ¶Ç¤J `ic_*_task_cfg_t` ¥iÂÐ¼g¨C­Ó task ªº¦¸¼Æ/¶g´Á¡]`max_count=0` ¥Nªí«ùÄò¹B¦æ¡A¤£¦Û°Êµ²§ô¡^
+2. **RTOS ¤¤¶¡¼h¡]FreeRTOS/CMSIS-RTOS v2¡^**
+   - `Core/Src/freertos.c`¡G¥ô°È/±Æµ{ªì©l¤Æ»P RTOS ±Ò°ÊÂI
+   - Logger queue + logger task¡]`g_log_queue`, `ic_log_task`¡^
+   - I2C mutex¡]`i2cMutexHandle`¡^»P app event flags¡]`g_app_init_done`, `g_app_error_flags`¡^
+   - `Middlewares/Third_Party/FreeRTOS`¡GFreeRTOS ®Ö¤ß»P CMSIS-RTOS v2 ¤¶­±
+3. **Driver / Middleware ¼h**
+   - `ic_bmp280`¡GBMP280 ÅX°Ê
+   - `ic_vl53l0x`¡GVL53L0X ÅX°Ê
+   - `ic_led`¡GªO¤W LED ±±¨î
+   - `ic_logger`¡Glog ¤¶­±¡]¥Ø«e¹ê§@¬° UART ¿é¥X¡^
+   - `ic_status`¡G²Î¤@ªºª¬ºA½X»P¤ÀÃþ¨ç¦¡
+4. **HAL / BSP ¼h¡]CubeMX ¥Í¦¨¡^**
+   - GPIO / I2C / USART ªì©l³]©w
+   - clock / ¤¤Â_ / ¨t²Î±Ò°Êµ{¦¡½X
+
+Â²¤Æ¬[ºc¹Ï¡G
+
+```
           +----------------------+
           |      ic_app          |
           |  - ic_app_init()     |
@@ -100,44 +112,45 @@ Simplified architecture:
          +--> ic_app_*_task()
 ```
 
-### 3.1 Wiring (Readable Version)
+### 3.1 ±µ½u¹Ï¡]©öÅªª©¡^
 
-1. Shared I2C bus (both sensors on same bus)
-   - SCL: `D15 (PB8)`
-   - SDA: `D14 (PB9)`
-2. Connect BMP280 (3.3V)
-3. Connect VL53L0X (3.3V)
+1. ¦@¥Î I2C ¶×¬y±Æ¡]¨âÁû·P´ú¾¹¦@¥Î¡^
+   - SCL¡G`D15 (PB8)`
+   - SDA¡G`D14 (PB9)`
+2. ³s±µ BMP280¡]3.3V¡^
+3. ³s±µ VL53L0X¡]3.3V¡^
 
-BMP280 wiring map
+BMP280 ±µ½u¹ï·Ó
 
-| BMP280 pin | NUCLEO header | NUCLEO pin | Function |
+| BMP280 ¸}¦ì | NUCLEO ±µÀY | NUCLEO ¸}¦ì | ¥\¯à |
 | --- | --- | --- | --- |
-| VCC | CN8 Pin 4 | +3V3 | 3.3V power |
-| GND | CN8 Pin 6 | GND | Ground |
-| SCL | CN5 Pin 10 | D15 (PB8) | I2C1 clock |
-| SDA | CN5 Pin 9 | D14 (PB9) | I2C1 data |
+| VCC | CN8 Pin 4 | +3V3 | ¹q·½ 3.3V |
+| GND | CN8 Pin 6 | GND | ±µ¦a |
+| SCL | CN5 Pin 10 | D15 (PB8) | I2C1 ®ÉÄÁ |
+| SDA | CN5 Pin 9 | D14 (PB9) | I2C1 ¸ê®Æ |
 
-VL53L0X wiring map
+VL53L0X ±µ½u¹ï·Ó
 
-| VL53L0X pin | NUCLEO header | NUCLEO pin | Function |
+| VL53L0X ¸}¦ì | NUCLEO ±µÀY | NUCLEO ¸}¦ì | ¥\¯à |
 | --- | --- | --- | --- |
-| VCC | CN7 Pin 16 | +3V3 | 3.3V power |
-| GND | CN7 Pin 20 | GND | Ground |
-| SCL | CN10 Pin 3 | D15 (PB8) | I2C1 clock (shared) |
-| SDA | CN10 Pin 5 | D14 (PB9) | I2C1 data (shared) |
+| VCC | CN7 Pin 16 | +3V3 | ¹q·½ 3.3V |
+| GND | CN7 Pin 20 | GND | ±µ¦a |
+| SCL | CN10 Pin 3 | D15 (PB8) | I2C1 ®ÉÄÁ¡]¦@¥Î¡^ |
+| SDA | CN10 Pin 5 | D14 (PB9) | I2C1 ¸ê®Æ¡]¦@¥Î¡^ |
 
-I2C address table
+I2C ¦ì§}¹ï·Ó
 
-| Sensor | I2C address | Note |
+| ·P´ú¾¹ | I2C ¦ì§} | ³Æµù |
 | --- | --- | --- |
-| BMP280 | `0x76` | When SDO is connected to GND |
-| VL53L0X | `0x29` | Default address |
+| BMP280 | `0x76` | SDO ±µ GND ®É¬°¦¹¦ì§} |
+| VL53L0X | `0x29` | ¹w³]¦ì§} |
+
 
 ---
 
-## 4. Project Directory Structure
+## 4. ±M®×¥Ø¿ýµ²ºc
 
-```text
+```
 Core/
   Inc/
     main.h
@@ -163,7 +176,7 @@ Core/
     Inc/
       ic_app.h         # App entry
       ic_bmp280.h      # BMP280 driver API
-      ic_led.h         # LED control API
+      ic_led.h         # LED ±±¨î API
       ic_logger.h      # logger API (log level, printf)
       ic_status.h      # status code helpers
       ic_vl53l0x.h     # VL53L0X driver API
@@ -187,7 +200,7 @@ Middlewares/
 
 ---
 
-## 5. Key Modules
+## 5. ¥D­n¼Ò²Õ»¡©ú
 
 ### 5.1 ic_app
 
@@ -199,23 +212,23 @@ void ic_app_temp_task(void *argument);
 ```
 
 - `ic_app_init()`
-  - Initializes LED
-  - Initializes BMP280 / VL53L0X (up to `IC_APP_INIT_MAX_RETRIES` retries per sensor)
-  - Sets error bits on persistent failure (`IC_APP_BMP280_FAIL_BIT` / `IC_APP_VL53L0X_FAIL_BIT`)
-  - Runs I2C scan only when `IC_DEBUG_I2C_SCAN` is defined (avoids production boot delay)
+  - ªì©l¤Æ LED
+  - ªì©l¤Æ BMP280 / VL53L0X¡]¨CÁû³Ì¦h­«¸Õ `IC_APP_INIT_MAX_RETRIES` ¦¸¡^
+  - ­Y·P´ú¾¹«ùÄò¥¢±Ñ¡A³]©w¹ïÀ³ error bit¡]`IC_APP_BMP280_FAIL_BIT` / `IC_APP_VL53L0X_FAIL_BIT`¡^
+  - `IC_DEBUG_I2C_SCAN` ©w¸q¦s¦b®É¤~°õ¦æ I2C ±½´y¡]Á×§K production ¶}¾÷©µ¿ð¡^
 - `ic_app_led_task()`
-  - Waits for `IC_APP_INIT_DONE_BIT`
-  - Toggles LED based on `ic_led_task_cfg_t` period (default 500 ms)
+  - µ¥«Ý `IC_APP_INIT_DONE_BIT`
+  - ¨Ì `ic_led_task_cfg_t` ¶g´Á¤Á´« LED¡]¹w³] 500ms¡^
 - `ic_app_tof_task()`
-  - Waits for `IC_APP_INIT_DONE_BIT`
-  - Exits immediately if `IC_APP_VL53L0X_FAIL_BIT` is set
-  - Reads VL53L0X based on `ic_tof_task_cfg_t` period (default 250 ms)
-  - All I2C accesses are protected by `i2cMutexHandle`
+  - µ¥«Ý `IC_APP_INIT_DONE_BIT`
+  - ­Y `IC_APP_VL53L0X_FAIL_BIT` ¤w³]¸m¡Atask ·|ª½±µµ²§ô
+  - ¨Ì `ic_tof_task_cfg_t` ¶g´ÁÅª¨ú VL53L0X¡]¹w³] 250ms¡^
+  - ©Ò¦³ I2C ¦s¨ú³£¨Ï¥Î `i2cMutexHandle` «OÅ@
 - `ic_app_temp_task()`
-  - Waits for `IC_APP_INIT_DONE_BIT`
-  - Exits immediately if `IC_APP_BMP280_FAIL_BIT` is set
-  - Reads BMP280 temperature based on `ic_temp_task_cfg_t` period (default 1000 ms)
-  - All I2C accesses are protected by `i2cMutexHandle`
+  - µ¥«Ý `IC_APP_INIT_DONE_BIT`
+  - ­Y `IC_APP_BMP280_FAIL_BIT` ¤w³]¸m¡Atask ·|ª½±µµ²§ô
+  - ¨Ì `ic_temp_task_cfg_t` ¶g´ÁÅª¨ú BMP280¡]¹w³] 1000ms¡^
+  - ©Ò¦³ I2C ¦s¨ú³£¨Ï¥Î `i2cMutexHandle` «OÅ@
 
 ### 5.2 ic_bmp280
 
@@ -318,30 +331,30 @@ const char *IC_Status_CategoryString(ic_status_t status);
 
 ---
 
-## 6. Build and Flash
+## 6. «Ø¸m»P¿N¿ý
 
-### 6.1 GCC + Python build script
+### 6.1 ¨Ï¥Î GCC + Python build ¸}¥»
 
 ```bash
-# Clean old outputs
+# ²M°£ÂÂªº¿é¥X
 python build.py --clean
 
-# Build
+# ½sÄ¶
 python build.py
 
-# Debug build (enables IC_DEBUG_I2C_SCAN)
+# debug build¡]·|¶}±Ò IC_DEBUG_I2C_SCAN¡^
 python build.py --debug
 
-# Build and auto-flash
+# ½sÄ¶¦¨¥\«á¦Û°Ê¿N¿ý
 python build.py --flash
 
-# Debug build + auto-flash
+# debug build + ¦Û°Ê¿N¿ý
 python build.py --debug --flash
 ```
 
-After a successful build, `.elf` / `.hex` files are generated in `out_gcc/` (or your configured output folder).
+½sÄ¶¦¨¥\«á¡A·|¦b `out_gcc/`¡]©Î§A³]©wªº¿é¥X¸ê®Æ§¨¡^²£¥Í `.elf` / `.hex`¡C
 
-Optional configuration (priority: CLI args > env vars > built-in defaults in `build.py`):
+¥i¿ï³]©w¡]Àu¥ý§Ç¡GCLI °Ñ¼Æ > Àô¹ÒÅÜ¼Æ > `build.py` ¤º«Ø¹w³]¡^¡G
 
 ```bash
 set STM32_GCC_BIN=C:\...\gnu-tools-for-stm32\...\tools\bin
@@ -349,7 +362,7 @@ set STM32_PROGRAMMER_BIN=C:\...\cubeprogrammer\...\tools\bin
 python build.py --gcc-bin "C:\path\to\gcc\bin" --programmer-bin "C:\path\to\programmer\bin" --flash
 ```
 
-### 6.2 Manual flash with STM32_Programmer_CLI (optional)
+### 6.2 ¨Ï¥Î STM32_Programmer_CLI ¤â°Ê¿N¿ý¡]¥i¿ï¡^
 
 ```bash
 set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
@@ -358,19 +371,19 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 
 ---
 
-## 7. Run and UART Log Example
+## 7. °õ¦æ & UART log ½d¨Ò
 
-Use Putty to connect to ST-LINK Virtual COM:
+¨Ï¥Î Putty ³s½u¦Ü ST-LINK Virtual COM¡G
 
-- Serial line: `COM3`
-- Baud rate: `115200` (adjust to your actual config)
-- Data bits: `8`
-- Parity: `None`
-- Flow control: `None`
+- Serial line¡G`COM3`
+- Baud rate¡G`115200`¡]½Ð¨Ì¹ê»Ú³]©w½Õ¾ã¡^
+- Data bits¡G`8`
+- Parity¡G`None`
+- Flow control¡G`None`
 
-Example output (actual boot log):
+¥Ü¨Ò¿é¥X¡]¹ê»Ú boot log¡^¡G
 
-```text
+```
 [Nucleo_F446RE] Boot OK!
 [Nucleo_F446RE] Scanning I2C...
 [Nucleo_F446RE] Found device at 0x29
@@ -387,3 +400,5 @@ Example output (actual boot log):
 [BMP280] Temp task started
 [BMP280] Temp detect 0 - Temp: 29.55 C
 ```
+
+
