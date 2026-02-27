@@ -1,6 +1,23 @@
 Copyright (c) 2026. All rights reserved.
 
 ================================================================================
+RELEASE 2026-02-27
+- Refactor `ic_app` startup/task flow for stronger runtime robustness:
+  - Added bounded retry init for BMP280/VL53L0X (`IC_APP_INIT_MAX_RETRIES`, `IC_APP_INIT_RETRY_DELAY_MS`).
+  - Added per-sensor fail flags (`IC_APP_BMP280_FAIL_BIT`, `IC_APP_VL53L0X_FAIL_BIT`) in `g_app_error_flags`.
+  - Sensor tasks now abort gracefully when corresponding fail flag is set.
+
+- Improved I2C safety and production behavior:
+  - Guarded sensor init and runtime sensor reads with `i2cMutexHandle`.
+  - Wrapped I2C scan behind `IC_DEBUG_I2C_SCAN` to remove unnecessary boot delay in production.
+
+- Improved app task configurability:
+  - Added `ic_led_task_cfg_t`, `ic_tof_task_cfg_t`, `ic_temp_task_cfg_t` argument-driven configuration.
+  - Replaced hardcoded loop/interval values with compile-time tunables and task config defaults.
+
+- Updated documentation to match current app behavior and APIs:
+  - readme.md
+================================================================================
 RELEASE 2026-02-26
 - Normalized comments, spacing, and API descriptions for Core/app modules:
   - Core/app/Inc/ic_app.h
@@ -99,3 +116,4 @@ RELEASE 2026-02-11
 - Modularized application components (logger/LED) and fixed build script.
 
 - Initial baseline CubeIDE project import.
+

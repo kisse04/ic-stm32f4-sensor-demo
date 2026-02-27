@@ -1,5 +1,5 @@
 # ic-stm32f4-sensor-demo
-更新日期：2026-02-26
+更新日期：2026-02-27
 
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
@@ -12,6 +12,7 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
 > - Handle-based sensor drivers with shared status codes (ic_status)
 > - A lightweight logging abstraction on top of UART with an RTOS queue/task (ic_logger)
 > - FreeRTOS/CMSIS-RTOS v2 task scheduling for the app flow
+> - Retry-based sensor init, task-level graceful abort, and I2C mutex protection
 > - A custom GCC+Python build flow decoupled from STM32CubeIDE
 
 ---
@@ -49,14 +50,15 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
 專案分為四層：
 
 1. **App 層 (`ic_app`)**
-   - `ic_app_init()`：初始化 LED、感測器與 I2C 掃描
-   - `ic_app_led_task()`：500ms 週期切換 LED（20 次後結束）
-   - `ic_app_tof_task()`：250ms 週期讀 VL53L0X（40 次後結束）
-   - `ic_app_temp_task()`：1000ms 週期讀 BMP280 溫度（10 次後結束）
+   - `ic_app_init()`：初始化 LED，並以 retry 機制初始化感測器
+   - `ic_app_led_task()`：預設 500ms 週期切換 LED（預設 20 次後結束）
+   - `ic_app_tof_task()`：預設 250ms 週期讀 VL53L0X（預設 40 次後結束）
+   - `ic_app_temp_task()`：預設 1000ms 週期讀 BMP280 溫度（預設 10 次後結束）
+   - 透過 task argument 傳入 `ic_*_task_cfg_t` 可覆寫每個 task 的次數/週期
 2. **RTOS 中間層（FreeRTOS/CMSIS-RTOS v2）**
    - `Core/Src/freertos.c`：任務/排程初始化與 RTOS 啟動點
    - Logger queue + logger task（`g_log_queue`, `ic_log_task`）
-   - I2C mutex（`i2cMutexHandle`）與 app init event flags（`g_app_init_done`）
+   - I2C mutex（`i2cMutexHandle`）與 app event flags（`g_app_init_done`, `g_app_error_flags`）
    - `Middlewares/Third_Party/FreeRTOS`：FreeRTOS 核心與 CMSIS-RTOS v2 介面
 3. **Driver / Middleware 層**
    - `ic_bmp280`：BMP280 驅動
@@ -172,16 +174,22 @@ void ic_app_temp_task(void *argument);
 
 - `ic_app_init()`
   - 初始化 LED
-  - 執行 I2C 掃描
-  - 初始化 BMP280 / VL53L0X
+  - 初始化 BMP280 / VL53L0X（每顆最多重試 `IC_APP_INIT_MAX_RETRIES` 次）
+  - 若感測器持續失敗，設定對應 error bit（`IC_APP_BMP280_FAIL_BIT` / `IC_APP_VL53L0X_FAIL_BIT`）
+  - `IC_DEBUG_I2C_SCAN` 定義存在時才執行 I2C 掃描（避免 production 開機延遲）
 - `ic_app_led_task()`
-  - 500ms 週期切換 LED
+  - 等待 `IC_APP_INIT_DONE_BIT`
+  - 依 `ic_led_task_cfg_t` 週期切換 LED（預設 500ms）
 - `ic_app_tof_task()`
-  - 250ms 週期讀取 VL53L0X 距離
-  - I2C 存取前後使用 mutex
+  - 等待 `IC_APP_INIT_DONE_BIT`
+  - 若 `IC_APP_VL53L0X_FAIL_BIT` 已設置，task 會直接結束
+  - 依 `ic_tof_task_cfg_t` 週期讀取 VL53L0X（預設 250ms）
+  - 所有 I2C 存取都使用 `i2cMutexHandle` 保護
 - `ic_app_temp_task()`
-  - 1000ms 週期讀取 BMP280 溫度
-  - I2C 存取前後使用 mutex
+  - 等待 `IC_APP_INIT_DONE_BIT`
+  - 若 `IC_APP_BMP280_FAIL_BIT` 已設置，task 會直接結束
+  - 依 `ic_temp_task_cfg_t` 週期讀取 BMP280（預設 1000ms）
+  - 所有 I2C 存取都使用 `i2cMutexHandle` 保護
 
 ### 5.2 ic_bmp280
 
@@ -332,3 +340,4 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 [BMP280] Temp task started
 [BMP280] Temp detect 0 - Temp: 29.55 C
 ```
+
