@@ -107,6 +107,40 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
          +--> ic_app_*_task()
 ```
 
+### 3.1 接線圖（易讀版）
+
+1. 共用 I2C 匯流排（兩顆感測器共用）
+   - SCL：`D15 (PB8)`
+   - SDA：`D14 (PB9)`
+2. 連接 BMP280（3.3V）
+3. 連接 VL53L0X（3.3V）
+
+BMP280 接線對照
+
+| BMP280 腳位 | NUCLEO 接頭 | NUCLEO 腳位 | 功能 |
+| --- | --- | --- | --- |
+| VCC | CN8 Pin 4 | +3V3 | 電源 3.3V |
+| GND | CN8 Pin 6 | GND | 接地 |
+| SCL | CN5 Pin 10 | D15 (PB8) | I2C1 時鐘 |
+| SDA | CN5 Pin 9 | D14 (PB9) | I2C1 資料 |
+
+VL53L0X 接線對照
+
+| VL53L0X 腳位 | NUCLEO 接頭 | NUCLEO 腳位 | 功能 |
+| --- | --- | --- | --- |
+| VCC | CN7 Pin 16 | +3V3 | 電源 3.3V |
+| GND | CN7 Pin 20 | GND | 接地 |
+| SCL | CN10 Pin 3 | D15 (PB8) | I2C1 時鐘（共用） |
+| SDA | CN10 Pin 5 | D14 (PB9) | I2C1 資料（共用） |
+
+I2C 位址對照
+
+| 感測器 | I2C 位址 | 備註 |
+| --- | --- | --- |
+| BMP280 | `0x76` | SDO 接 GND 時為此位址 |
+| VL53L0X | `0x29` | 預設位址 |
+
+
 ---
 
 ## 4. 專案目錄結構
@@ -340,4 +374,5 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 [BMP280] Temp task started
 [BMP280] Temp detect 0 - Temp: 29.55 C
 ```
+
 
