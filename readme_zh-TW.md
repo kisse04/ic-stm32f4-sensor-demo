@@ -3,7 +3,7 @@
 **README Languages:** 
 [English](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme.md) | [中文說明](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme_zh-TW.md)
 
-更新日期：2026-02-27
+更新日期：2026-03-01
 
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
@@ -43,76 +43,108 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
   - VL53L0X 模組（3.3V）
 - 介面：
   - I2C1：同一條 bus 併聯 BMP280 + VL53L0X
-  - USART2：透過 ST-LINK Virtual COM Port 連到 PC（Putty/TeraTerm）
+  - USART2：透過 ST-LINK Virtual COM Port 連到 PC（PuTTY/TeraTerm）
 
-> - SCL/SDA 腳位（同時使用 PB8/PB9 D15/D14）
-> - VCC / GND 接腳
+- 主要接線：
+  - SCL/SDA 腳位（同時使用 PB8/PB9 D15/D14）
+  - VCC / GND 接腳
 
 ---
 
 ## 3. 軟體架構
 
-專案分為四層：
+本專案採用 MCU 平台常見的四層式嵌入式軟體架構。
 
-1. **App 層 (`ic_app`)**
-   - `ic_app_init()`：初始化 LED，並以 retry 機制初始化感測器
-   - `ic_app_led_task()`：預設 500ms 週期切換 LED（預設 20 次後結束）
-   - `ic_app_tof_task()`：預設 250ms 週期讀 VL53L0X（預設 40 次後結束）
-   - `ic_app_temp_task()`：預設 1000ms 週期讀 BMP280 溫度（預設 10 次後結束）
-   - 透過 task argument 傳入 `ic_*_task_cfg_t` 可覆寫每個 task 的次數/週期（`max_count=0` 代表持續運行，不自動結束）
-2. **RTOS 中間層（FreeRTOS/CMSIS-RTOS v2）**
-   - `Core/Src/freertos.c`：任務/排程初始化與 RTOS 啟動點
-   - Logger queue + logger task（`g_log_queue`, `ic_log_task`）
-   - I2C mutex（`i2cMutexHandle`）與 app event flags（`g_app_init_done`, `g_app_error_flags`）
-   - `Middlewares/Third_Party/FreeRTOS`：FreeRTOS 核心與 CMSIS-RTOS v2 介面
-3. **Driver / Middleware 層**
-   - `ic_bmp280`：BMP280 驅動
-   - `ic_vl53l0x`：VL53L0X 驅動
-   - `ic_led`：板上 LED 控制
-   - `ic_logger`：log 介面（目前實作為 UART 輸出）
-   - `ic_status`：統一的狀態碼與分類函式
-4. **HAL / BSP 層（CubeMX 生成）**
-   - GPIO / I2C / USART 初始設定
-   - clock / 中斷 / 系統啟動程式碼
+### 3.1 Application 層（`ic_app`）
+
+負責示範行為與高階流程控制。  
+此層不直接操作硬體，而是依賴 service 模組。
+
+- 主要 API：
+  - `ic_app_init()`：初始化 LED + 感測器，並使用 retry 與 event flag 同步。
+  - `ic_app_led_task()`：LED 閃爍任務（預設 500 ms，20 次後停止）。
+  - `ic_app_tof_task()`：VL53L0X 量測任務（預設 250 ms）。
+  - `ic_app_temp_task()`：BMP280 溫度任務（預設 1000 ms）。
+- 任務行為可透過 `ic_*_task_cfg_t` 設定（`max_count = 0` 代表持續執行）。
+- 責任：應用狀態機、示範邏輯與感測器/LED 協調控制。
+
+### 3.2 OSAL 層（FreeRTOS / CMSIS-RTOS v2）
+
+提供應用層與 service 層共用的作業系統抽象能力。
+
+- 主要實作：`Core/Src/freertos.c`
+- 提供能力：
+  - 任務建立與排程器啟動
+  - Event flags：`g_app_init_done`、`g_app_error_flags`
+  - 同步機制
+  - I2C mutex（`i2cMutexHandle`）
+  - Logger queue（`g_log_queue`）與 logger task（`ic_log_task`）
+  - RTOS 後端：透過 CMSIS-RTOS v2 封裝 FreeRTOS
+- FreeRTOS 原始碼位置：`Middlewares/Third_Party/FreeRTOS`
+- 責任：執行緒、同步、訊息傳遞與統一 OS 介面。
+
+### 3.3 Service 層（可重用功能模組）
+
+放置位於 HAL 之上的硬體無關邏輯。
+
+- 模組：
+  - `ic_bmp280`：BMP280 溫度驅動
+  - `ic_vl53l0x`：VL53L0X ToF 驅動
+  - `ic_led`：LED 邏輯控制 API
+  - `ic_logger`：基於 UART 的 logging 服務
+  - `ic_status`：統一狀態碼與分類輔助函式
+- 這些模組使用 HAL API（I2C/UART/GPIO），並對上層提供乾淨的裝置級介面。
+- 責任：可重用感測器驅動、錯誤處理、記錄與裝置抽象。
+
+### 3.4 BSP / HAL 層（CubeMX 產生之板級支援）
+
+最底層，直接對應 STM32F446RE Nucleo 板卡。
+
+- GPIO / I2C / USART 初始化
+- Clock tree、系統啟動與中斷設定
+- CubeMX 產生的硬體設定（`MX_GPIO_Init`、`MX_I2C1_Init` 等）
+- 位置：`Core/Src`、`Core/Inc`、`Drivers/STM32F4xx_HAL_Driver`
+- 責任：板級初始化、HAL 周邊存取與低階硬體設定。
 
 簡化架構圖：
 
+```text
+      +----------------------------------+
+      | Application 層（`ic_app`）       |
+      | - ic_app_init()                  |
+      | - ic_app_led_task()              |
+      | - ic_app_tof_task()              |
+      | - ic_app_temp_task()             |
+      +----------------+-----------------+
+                       |
+      +----------------v-----------------+
+      | Service 層                       |
+      | - ic_bmp280                      |
+      | - ic_vl53l0x                     |
+      | - ic_led                         |
+      | - ic_logger                      |
+      | - ic_status                      |
+      +------+--------------+------------+
+             |              |
+             | 使用 OSAL     | 使用 HAL API（I2C/UART/GPIO）
+             v              v
+      +----------------+    +------------------------------+
+      | OSAL 層        |    | BSP / HAL 層                 |
+      | (FreeRTOS /    |    | (CubeMX 產生)                |
+      |  CMSIS-RTOS v2)|    | - MX_GPIO_Init               |
+      | - tasks/sched  |    | - MX_I2C1_Init               |
+      | - event flags  |    | - MX_USART2_UART_Init        |
+      | - mutex/queue  |    | - Core/Src Core/Inc Drivers  |
+      +--------+-------+    +---------------+--------------+
+               |                            |
+               +------------+---------------+
+                            v
+                 +-------------------------+
+                 | 硬體周邊                 |
+                 | GPIO / I2C1 / USART2    |
+                 +-------------------------+
 ```
-          +----------------------+
-          |      ic_app          |
-          |  - ic_app_init()     |
-          |  - ic_app_*_task()   |
-          +----------+-----------+
-                     |
-        +------------+-------------+
-        |                          |
-  +-----v------+            +------v------+
-  | ic_bmp280 |            | ic_vl53l0x  |
-  +-----------+            +-------------+
-        |                          |
-  +-----v------+            +------v------+
-  |   I2C1     | (stm32 HAL drivers)     |
-  +------------+-------------------------+
-
-  +-----------+     +-------------+
-  | ic_logger | --> |   USART2    |
-  +-----------+     +-------------+
-        ^
-        |
-   log queue/task
-
-  +--------+
-  | ic_led |
-  +--------+ --> GPIO
-
-  +---------------------------+
-  |   FreeRTOS / CMSIS-RTOS   |
-  +---------------------------+
-         | (task schedule)
-         +--> ic_app_*_task()
-```
-
-### 3.1 接線圖（易讀版）
+### 3.5 接線圖（易讀版）
 
 1. 共用 I2C 匯流排（兩顆感測器共用）
    - SCL：`D15 (PB8)`
@@ -335,7 +367,7 @@ const char *IC_Status_CategoryString(ic_status_t status);
 
 ### 6.1 使用 GCC + Python build 腳本
 
-```bash
+```cmd
 # 清除舊的輸出
 python build.py --clean
 
@@ -356,7 +388,7 @@ python build.py --debug --flash
 
 可選設定（優先序：CLI 參數 > 環境變數 > `build.py` 內建預設）：
 
-```bash
+```cmd
 set STM32_GCC_BIN=C:\...\gnu-tools-for-stm32\...\tools\bin
 set STM32_PROGRAMMER_BIN=C:\...\cubeprogrammer\...\tools\bin
 python build.py --gcc-bin "C:\path\to\gcc\bin" --programmer-bin "C:\path\to\programmer\bin" --flash
@@ -364,7 +396,7 @@ python build.py --gcc-bin "C:\path\to\gcc\bin" --programmer-bin "C:\path\to\prog
 
 ### 6.2 使用 STM32_Programmer_CLI 手動燒錄（可選）
 
-```bash
+```cmd
 set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
 STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 ```
@@ -373,7 +405,7 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 
 ## 7. 執行 & UART log 範例
 
-使用 Putty 連線至 ST-LINK Virtual COM：
+使用 PuTTY 連線至 ST-LINK Virtual COM：
 
 - Serial line：`COM3`
 - Baud rate：`115200`（請依實際設定調整）

@@ -3,7 +3,7 @@
 **README Languages:**  
 [English](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme.md) | [中文說明](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme_zh-TW.md)
 
-Last updated: 2026-02-27
+Last updated: 2026-03-01
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 temperature sensor + VL53L0X ToF distance sensor demo.
 This project demonstrates how to read multiple sensors over I2C and output logs through UART.
@@ -31,76 +31,108 @@ This project demonstrates how to read multiple sensors over I2C and output logs 
   - VL53L0X module (3.3V)
 - Interfaces:
   - I2C1: shared bus for BMP280 + VL53L0X
-  - USART2: ST-LINK Virtual COM Port to PC (Putty/TeraTerm)
-
-> - SCL/SDA pins (PB8/PB9, D15/D14)
-> - VCC / GND pins
+  - USART2: ST-LINK Virtual COM Port to PC (PuTTY/TeraTerm)
+- Key wiring:
+  - SCL/SDA pins (PB8/PB9, D15/D14)
+  - VCC / GND pins
 
 ---
 
 ## 3. Software Architecture
 
-The project is split into four layers:
+This project follows a four-layer embedded software architecture commonly used in MCU platforms.
 
-1. **App layer (`ic_app`)**
-   - `ic_app_init()`: initialize LED and sensors with retry logic
-   - `ic_app_led_task()`: toggle LED every 500 ms by default (stops after 20 iterations by default)
-   - `ic_app_tof_task()`: read VL53L0X every 250 ms by default (stops after 40 iterations by default)
-   - `ic_app_temp_task()`: read BMP280 temperature every 1000 ms by default (stops after 10 iterations by default)
-   - Task behavior can be overridden via `ic_*_task_cfg_t` arguments (`max_count=0` means run indefinitely)
-2. **RTOS mid layer (FreeRTOS/CMSIS-RTOS v2)**
-   - `Core/Src/freertos.c`: task scheduling init and RTOS startup entry
-   - Logger queue + logger task (`g_log_queue`, `ic_log_task`)
-   - I2C mutex (`i2cMutexHandle`) and app event flags (`g_app_init_done`, `g_app_error_flags`)
-   - `Middlewares/Third_Party/FreeRTOS`: FreeRTOS core and CMSIS-RTOS v2 interface
-3. **Driver / Middleware layer**
-   - `ic_bmp280`: BMP280 driver
-   - `ic_vl53l0x`: VL53L0X driver
-   - `ic_led`: onboard LED control
-   - `ic_logger`: logging interface (currently UART-based)
-   - `ic_status`: unified status codes and category helpers
-4. **HAL / BSP layer (CubeMX generated)**
-   - GPIO / I2C / USART initialization
-   - Clock / interrupts / system startup code
+### 3.1 Application Layer (`ic_app`)
+
+Implements demo behavior and high-level logic.  
+This layer does not access hardware directly; it depends on service modules.
+
+- Main APIs:
+  - `ic_app_init()`: initialize LED + sensors with retry and event-flag synchronization.
+  - `ic_app_led_task()`: LED blinking task (default 500 ms, stops after 20 cycles).
+  - `ic_app_tof_task()`: VL53L0X ranging task (default 250 ms).
+  - `ic_app_temp_task()`: BMP280 temperature task (default 1000 ms).
+- Task behavior is configurable via `ic_*_task_cfg_t` (`max_count = 0` means run indefinitely).
+- Responsibility: application state machine, demo logic, and sensor/LED orchestration.
+
+### 3.2 OSAL Layer (FreeRTOS / CMSIS-RTOS v2)
+
+Provides OS primitives abstracted from the application and service layers.
+
+- Main implementation: `Core/Src/freertos.c`
+- Capabilities:
+  - Task creation and scheduler startup
+  - Event flags: `g_app_init_done`, `g_app_error_flags`
+  - Synchronization primitives
+  - I2C mutex (`i2cMutexHandle`)
+  - Logger queue (`g_log_queue`) + logger task (`ic_log_task`)
+  - RTOS backend: FreeRTOS through CMSIS-RTOS v2 wrapper
+- FreeRTOS source location: `Middlewares/Third_Party/FreeRTOS`
+- Responsibility: threading, synchronization, messaging, and a unified OS interface.
+
+### 3.3 Service Layer (Reusable Functional Modules)
+
+Contains hardware-independent logic above the HAL.
+
+- Modules:
+  - `ic_bmp280`: BMP280 temperature driver
+  - `ic_vl53l0x`: VL53L0X ToF driver
+  - `ic_led`: LED control (logical LED API)
+  - `ic_logger`: UART-based logging service
+  - `ic_status`: unified status codes and category helpers
+- These modules use HAL APIs (I2C/UART/GPIO) but expose clean device-level interfaces to upper layers.
+- Responsibility: reusable sensor drivers, error handling, logging, and device abstraction.
+
+### 3.4 BSP / HAL Layer (CubeMX-Generated Board Support)
+
+Lowest layer tied to the STM32F446RE Nucleo board.
+
+- GPIO / I2C / USART initialization
+- Clock tree, system startup, and interrupt setup
+- CubeMX-generated hardware configuration (`MX_GPIO_Init`, `MX_I2C1_Init`, etc.)
+- Locations: `Core/Src`, `Core/Inc`, `Drivers/STM32F4xx_HAL_Driver`
+- Responsibility: board-specific initialization, HAL peripheral access, and low-level hardware setup.
 
 Simplified architecture:
 
 ```text
-          +----------------------+
-          |      ic_app          |
-          |  - ic_app_init()     |
-          |  - ic_app_*_task()   |
-          +----------+-----------+
-                     |
-        +------------+-------------+
-        |                          |
-  +-----v------+            +------v------+
-  | ic_bmp280 |            | ic_vl53l0x  |
-  +-----------+            +-------------+
-        |                          |
-  +-----v------+            +------v------+
-  |   I2C1     | (stm32 HAL drivers)     |
-  +------------+-------------------------+
-
-  +-----------+     +-------------+
-  | ic_logger | --> |   USART2    |
-  +-----------+     +-------------+
-        ^
-        |
-   log queue/task
-
-  +--------+
-  | ic_led |
-  +--------+ --> GPIO
-
-  +---------------------------+
-  |   FreeRTOS / CMSIS-RTOS   |
-  +---------------------------+
-         | (task schedule)
-         +--> ic_app_*_task()
+      +----------------------------------+
+      | Application Layer (`ic_app`)     |
+      | - ic_app_init()                  |
+      | - ic_app_led_task()              |
+      | - ic_app_tof_task()              |
+      | - ic_app_temp_task()             |
+      +----------------+-----------------+
+                       |
+      +----------------v-----------------+
+      | Service Layer                    |
+      | - ic_bmp280                      |
+      | - ic_vl53l0x                     |
+      | - ic_led                         |
+      | - ic_logger                      |
+      | - ic_status                      |
+      +------+--------------+------------+
+             |              |
+             | uses OSAL    | uses HAL APIs (I2C/UART/GPIO)
+             v              v
+      +----------------+    +------------------------------+
+      | OSAL Layer     |    | BSP / HAL Layer              |
+      | (FreeRTOS /    |    | (CubeMX-generated)           |
+      |  CMSIS-RTOS v2)|    | - MX_GPIO_Init               |
+      | - tasks/sched  |    | - MX_I2C1_Init               |
+      | - event flags  |    | - MX_USART2_UART_Init        |
+      | - mutex/queue  |    | - Core/Src Core/Inc Drivers  |
+      +--------+-------+    +---------------+--------------+
+               |                            |
+               +------------+---------------+
+                            v
+                 +-------------------------+
+                 | Hardware Peripherals    |
+                 | GPIO / I2C1 / USART2    |
+                 +-------------------------+
 ```
 
-### 3.1 Wiring (Readable Version)
+### 3.5 Wiring (Readable Version)
 
 1. Shared I2C bus (both sensors on same bus)
    - SCL: `D15 (PB8)`
@@ -322,7 +354,7 @@ const char *IC_Status_CategoryString(ic_status_t status);
 
 ### 6.1 GCC + Python build script
 
-```bash
+```cmd
 # Clean old outputs
 python build.py --clean
 
@@ -343,7 +375,7 @@ After a successful build, `.elf` / `.hex` files are generated in `out_gcc/` (or 
 
 Optional configuration (priority: CLI args > env vars > built-in defaults in `build.py`):
 
-```bash
+```cmd
 set STM32_GCC_BIN=C:\...\gnu-tools-for-stm32\...\tools\bin
 set STM32_PROGRAMMER_BIN=C:\...\cubeprogrammer\...\tools\bin
 python build.py --gcc-bin "C:\path\to\gcc\bin" --programmer-bin "C:\path\to\programmer\bin" --flash
@@ -351,7 +383,7 @@ python build.py --gcc-bin "C:\path\to\gcc\bin" --programmer-bin "C:\path\to\prog
 
 ### 6.2 Manual flash with STM32_Programmer_CLI (optional)
 
-```bash
+```cmd
 set PATH=%PATH%;C:\ST\STM32CubeIDE_2.0.0\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.cubeprogrammer.win32_2.2.300.202508131133\tools\bin
 STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 ```
@@ -360,7 +392,7 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 
 ## 7. Run and UART Log Example
 
-Use Putty to connect to ST-LINK Virtual COM:
+Use PuTTY to connect to ST-LINK Virtual COM:
 
 - Serial line: `COM3`
 - Baud rate: `115200` (adjust to your actual config)
