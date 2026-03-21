@@ -49,6 +49,20 @@ STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器
   - SCL/SDA 腳位（同時使用 PB8/PB9 D15/D14）
   - VCC / GND 接腳
 
+硬體照片：
+
+開發板實體接線（NUCLEO-F446RE）
+
+![NUCLEO-F446RE 開發板照片](./images/STM32F446.png)
+
+BMP280 模組
+
+![BMP280 模組照片](./images/BMP280.png)
+
+VL53L0X 模組
+
+![VL53L0X 模組照片](./images/vl53l0x.png)
+
 ---
 
 ## 3. 軟體架構
@@ -432,5 +446,8 @@ STM32_Programmer_CLI.exe -c port=SWD -w out_gcc/your_project.hex -v -rst
 [BMP280] Temp task started
 [BMP280] Temp detect 0 - Temp: 29.55 C
 ```
+Tera Term 執行畫面：
+
+![Tera Term 執行 GIF](./images/COM1%20-%20Tera%20Term%20VT%202026-03-21%2010-34-22.mp4.gif)
 
 

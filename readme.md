@@ -36,6 +36,20 @@ This project demonstrates how to read multiple sensors over I2C and output logs 
   - SCL/SDA pins (PB8/PB9, D15/D14)
   - VCC / GND pins
 
+Hardware photos:
+
+Board setup (NUCLEO-F446RE)
+
+![NUCLEO-F446RE board photo](./images/STM32F446.png)
+
+BMP280 module
+
+![BMP280 module photo](./images/BMP280.png)
+
+VL53L0X module
+
+![VL53L0X module photo](./images/vl53l0x.png)
+
 ---
 
 ## 3. Software Architecture
@@ -419,3 +433,7 @@ Example output (actual boot log):
 [BMP280] Temp task started
 [BMP280] Temp detect 0 - Temp: 29.55 C
 ```
+
+Tera Term runtime capture:
+
+![Tera Term runtime GIF](./images/COM1%20-%20Tera%20Term%20VT%202026-03-21%2010-34-22.mp4.gif)
