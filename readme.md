@@ -3,7 +3,7 @@
 **README Languages:**  
 [English](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme.md) | [中文說明](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme_zh-TW.md)
 
-Last updated: 2026-03-01
+Last updated: 2026-03-21
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 temperature sensor + VL53L0X ToF distance sensor demo.
 This project demonstrates how to read multiple sensors over I2C and output logs through UART.

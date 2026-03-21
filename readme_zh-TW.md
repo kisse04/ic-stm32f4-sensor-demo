@@ -3,7 +3,7 @@
 **README Languages:** 
 [English](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme.md) | [中文說明](https://github.com/kisse04/ic-stm32f4-sensor-demo/blob/main/readme_zh-TW.md)
 
-更新日期：2026-03-01
+更新日期：2026-03-21
 
 
 STM32F446RE (NUCLEO-F446RE) + BMP280 溫度感測器 + VL53L0X ToF 距離感測器

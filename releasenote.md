@@ -1,7 +1,17 @@
 Copyright (c) 2026. All rights reserved.
 
 ================================================================================
-RELEASE 2026-02-27 (latest)
+RELEASE 2026-03-21 (latest)
+- Updated README documentation with GitHub-ready relative image links:
+  - Added hardware photos for the NUCLEO-F446RE board, BMP280 module, and VL53L0X module.
+  - Added Tera Term runtime GIF to the UART log / runtime section.
+
+- Updated documentation files:
+  - readme.md
+  - readme_zh-TW.md
+
+================================================================================
+RELEASE 2026-02-27
 - Added non-stop detect support for app tasks:
   - `ic_led_task_cfg_t.max_count = 0` means run forever.
   - `ic_tof_task_cfg_t.max_count = 0` means run forever.
